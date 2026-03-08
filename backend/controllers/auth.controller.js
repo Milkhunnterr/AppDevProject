@@ -117,7 +117,31 @@ export const getMe = async(req,res) => {
     }
 }
 
-// update Password
+// ระบบอัปเดตรหัสผ่าน
+export const updatePassword = async(req,res) => {
+    try{
+
+    }catch(error){
+
+    }
+}
 
 
-// forgotpassword
+// เมื่อลืมรหัสผ่าน
+export const forgotPassword = async(req,res) => {
+    try{
+
+    }catch(error){
+
+    }
+}
+
+
+// ตั้งรหัสผ่านใหม่
+export const resetPassword = async(req,res) => {
+    try{
+
+    }catch(error){
+        
+    }
+}
