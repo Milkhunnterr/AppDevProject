@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
         unique:true,
         trim:true,
         lowercase:true,
-        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'รูปแบบอีเมลไม่ถูกต้อง'] // เช็คว่ามี @ และ .com ไหม
+        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'รูปแบบอีเมลไม่ถูกต้อง'] 
     },
     imageProfile:{
         type:String
@@ -37,7 +37,6 @@ const userSchema = new mongoose.Schema({
         enum:["user" , "admin"  ,"official_store"],
         default:"user"
     },
-    // เก็บที่อยู่ได้หลายอัน
     address:[{
         label:String,
         addressLine:String,
@@ -48,13 +47,11 @@ const userSchema = new mongoose.Schema({
             default:false
         }
     }],
-
-    // ระบบความน่าเชื่อถือ Trust System
     trustScore:{
         type:Number,
         min:0,
-        max:100,
-        default:100
+        max:5,
+        default:5
     },
     tradeCount:{
         type:Number,
@@ -76,7 +73,9 @@ const userSchema = new mongoose.Schema({
     },
     lastLogin:{
         type:Date
-    }
+    },
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     
 },{timestamps:true});
 

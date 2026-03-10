@@ -1,12 +1,13 @@
 import Trade from "../models/Trade.model.js";
 import Product from "../models/Product.model.js";
+import User from "../models/User.model.js";
+import Notification from "../models/Notification.model.js";
 
 // ==========================================
-// 1. สร้างใบคำขอแลกของ (ยื่นข้อเสนอ ร่างทอง!)
+// 1. สร้างใบคำขอแลกของ (ยื่นข้อเสนอ)
 // ==========================================
 export const createTrade = async (req, res) => {
     try {
-        // รับค่ามาให้ครบทุกฟีเจอร์ที่เราเพิ่มไป
         const { 
             receiveId, offerItems, requestedItems, message,
             offerMoney, requestedMoney, delivered, meetupLocation, expiredAt 
@@ -14,50 +15,54 @@ export const createTrade = async (req, res) => {
         
         const requestId = req.user._id;
 
-        // 🛡️ ดักทาง: ห้ามแลกของกับตัวเอง
         if (requestId.toString() === receiveId.toString()) {
             return res.status(400).json({ success: false, message: "ไม่สามารถยื่นข้อเสนอให้ตัวเองได้" });
         }
 
-        // ⏳ เวทมนตร์: ถ้าหน้าเว็บไม่ได้ส่งวันหมดอายุมา ให้ตั้งเวลา "หมดอายุใน 3 วัน" อัตโนมัติ!
         let finalExpiredAt = expiredAt;
         if (!finalExpiredAt) {
             const today = new Date();
-            today.setDate(today.getDate() + 3); // บวกไปอีก 3 วัน
+            today.setDate(today.getDate() + 3); 
             finalExpiredAt = today;
         }
 
-        // สร้างใบเสนอแลกของลง Database
         const newTrade = await Trade.create({
             requestId,
             receiveId,
             offerItems,    
             requestedItems,  
             message,
-            offerMoney,       // แถมเงินให้เขา
-            requestedMoney,   // ขอเงินเขาเพิ่ม
-            delivered,        // วิธีส่งของ
-            meetupLocation,   // สถานที่นัดรับ
-            expiredAt: finalExpiredAt // วันหมดอายุ
+            offerMoney,
+            requestedMoney,
+            delivered,
+            meetupLocation,
+            expiredAt: finalExpiredAt
         });
 
-        res.status(201).json({ success: true, message: "ส่งคำขอแลกเปลี่ยนแบบพรีเมียมสำเร็จ!", data: newTrade });
+        // 🔔 แจ้งเตือนเจ้าของสินค้า
+        await Notification.create({
+            receiver: receiveId,
+            sender: requestId,
+            type: "TRADE_REQUEST",
+            message: `${req.user.username} ได้ส่งข้อเสนอขอเทรดสินค้าของคุณ!`,
+            linkId: newTrade._id
+        });
+
+        res.status(201).json({ success: true, message: "ส่งคำขอแลกเปลี่ยนสำเร็จ!", data: newTrade });
     } catch (error) {
-        console.log(`create trade error: ${error}`);
         res.status(500).json({ success: false, message: `Server Error: ${error.message}` });
     }
 };
 
 // ==========================================
-// 2. กล่องจดหมายขาเข้า (Inbox) - มีใครมาขอแลกของกับเราบ้าง?
+// 2. กล่องจดหมายขาเข้า (Inbox)
 // ==========================================
 export const getTradeRequests = async (req, res) => {
     try {
-        // หาเฉพาะใบเสนอที่เราเป็นคนรับ (receiveId)
         const trades = await Trade.find({ receiveId: req.user._id })
-            .populate("requestId", "username profilePic") // ดูหน้าคนขอ
-            .populate("offerItems", "productName images") // ดูของที่เขาเอามาแลก
-            .populate("requestedItems", "productName images") // ดูของของเราที่เขาอยากได้
+            .populate("requestId", "username imageProfile")
+            .populate("offerItems", "productName images")
+            .populate("requestedItems", "productName images")
             .sort({ createdAt: -1 });
 
         res.status(200).json({ success: true, count: trades.length, data: trades });
@@ -67,13 +72,12 @@ export const getTradeRequests = async (req, res) => {
 };
 
 // ==========================================
-// 3. กล่องจดหมายขาออก (Outbox) - เราไปขอแลกใครไว้บ้าง?
+// 3. กล่องจดหมายขาออก (Outbox)
 // ==========================================
 export const getMyOffers = async (req, res) => {
     try {
-        // หาเฉพาะใบเสนอที่เราเป็นคนไปขอเขา (requestId)
         const trades = await Trade.find({ requestId: req.user._id })
-            .populate("receiveId", "username profilePic")
+            .populate("receiveId", "username imageProfile")
             .populate("offerItems", "productName images")
             .populate("requestedItems", "productName images")
             .sort({ createdAt: -1 });
@@ -92,7 +96,6 @@ export const respondToTrade = async (req, res) => {
         const { status } = req.body; 
         const tradeId = req.params.id;
 
-        // ดักคนซน ส่งสเตตัสมั่วมา
         if (!["ACCEPTED", "REJECTED"].includes(status)) {
             return res.status(400).json({ success: false, message: "สถานะไม่ถูกต้อง" });
         }
@@ -100,20 +103,24 @@ export const respondToTrade = async (req, res) => {
         const trade = await Trade.findById(tradeId);
         if (!trade) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลการแลกเปลี่ยน" });
 
-        // 🛡️ ดักความปลอดภัย: คนที่จะกดตอบรับได้ ต้องเป็นเจ้าของของ (receiveId) เท่านั้น!
         if (trade.receiveId.toString() !== req.user._id.toString()) {
             return res.status(403).json({ success: false, message: "คุณไม่มีสิทธิ์ตัดสินใจข้อเสนอนี้" });
         }
 
-        // อัปเดตสถานะใบเสนอเป็น ตกลง หรือ ปฏิเสธ
         trade.status = status;
         await trade.save();
 
-        // 🔥 เวทมนตร์: ถ้ายอมรับแลก ให้เปลี่ยนสถานะสินค้าทั้งหมดเป็น "TRADED" อัตโนมัติ!
+        // 🔔 แจ้งเตือนกลับไปยังคนขอเทรด
+        await Notification.create({
+            receiver: trade.requestId,
+            sender: req.user._id,
+            type: status === "ACCEPTED" ? "TRADE_ACCEPTED" : "TRADE_REJECTED",
+            message: `${req.user.username} ได้ ${status === 'ACCEPTED' ? 'ยอมรับ' : 'ปฏิเสธ'} ข้อเสนอการเทรดของคุณแล้ว`,
+            linkId: trade._id
+        });
+
         if (status === "ACCEPTED") {
             const allItemIds = [...trade.offerItems, ...trade.requestedItems];
-            
-            // สั่ง Database ให้แก้สถานะรวดเดียวจบ!
             await Product.updateMany(
                 { _id: { $in: allItemIds } },
                 { $set: { status: "TRADED" } }
@@ -127,5 +134,95 @@ export const respondToTrade = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: `Server Error: ${error.message}` });
+    }
+};
+
+// ==========================================
+// 5. ยกเลิกคำขอแลกของ (Cancel Trade)
+// ==========================================
+export const cancelTrade = async (req, res) => {
+    try {
+        const trade = await Trade.findById(req.params.id);
+        if (!trade) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลการแลกเปลี่ยน" });
+
+        if (trade.requestId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: "คุณไม่มีสิทธิ์ยกเลิกข้อเสนอนี้" });
+        }
+
+        trade.status = "CANCELLED";
+        await trade.save();
+
+        res.status(200).json({ success: true, message: "ยกเลิกคำขอแลกเปลี่ยนแล้ว", data: trade });
+    } catch (error) {
+        res.status(500).json({ success: false, message: `Server Error: ${error.message}` });
+    }
+};
+
+// ==========================================
+// 6. ยืนยันการแลกเปลี่ยนสำเร็จ (Complete Trade)
+// ==========================================
+export const completeTrade = async (req, res) => {
+    try {
+        const trade = await Trade.findById(req.params.id);
+        if (!trade) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลการแลกเปลี่ยน" });
+
+        // ✅ อัปเกรดให้รองรับสถานะ SHIPPED ด้วย
+        if (trade.status !== "ACCEPTED" && trade.status !== "SHIPPED") {
+            return res.status(400).json({ success: false, message: "สถานะไม่ถูกต้อง ไม่สามารถจบการเทรดได้" });
+        }
+
+        if (trade.requestId.toString() !== req.user._id.toString() && trade.receiveId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: "คุณไม่มีสิทธิ์จัดการข้อเสนอนี้" });
+        }
+
+        trade.status = "COMPLETED";
+        await trade.save();
+
+        // 🔔 แจ้งเตือนฝ่ายตรงข้ามว่าการเทรดเสร็จสิ้นแล้ว
+        const otherPartyId = trade.requestId.toString() === req.user._id.toString() ? trade.receiveId : trade.requestId;
+        await Notification.create({
+            receiver: otherPartyId,
+            sender: req.user._id,
+            type: "TRADE_ACCEPTED", 
+            message: `การแลกเปลี่ยนกับ ${req.user.username} เสร็จสมบูรณ์แล้ว! อย่าลืมไปให้คะแนนความพึงพอใจกันนะครับ`,
+            linkId: trade._id
+        });
+
+        await User.updateMany(
+            { _id: { $in: [trade.requestId, trade.receiveId] } },
+            { $inc: { tradeCount: 1, successfulTrade: 1 } }
+        );
+
+        res.status(200).json({ success: true, message: "การแลกเปลี่ยนเสร็จสมบูรณ์แล้ว", data: trade });
+    } catch (error) {
+        res.status(500).json({ success: false, message: `Server Error: ${error.message}` });
+    }
+};
+
+// ==========================================
+// 7. 🚚 อัปเดตสถานะการจัดส่งพัสดุ
+// ==========================================
+export const updateShipping = async (req, res) => {
+    try {
+        const { tradeId, trackingNumber, shippingCompany } = req.body;
+        const trade = await Trade.findByIdAndUpdate(
+            tradeId,
+            { trackingNumber, shippingCompany, status: "SHIPPED" },
+            { new: true }
+        );
+
+        // 🔔 เพิ่มระบบแจ้งเตือนว่าของส่งแล้ว!
+        const otherPartyId = trade.requestId.toString() === req.user._id.toString() ? trade.receiveId : trade.requestId;
+        await Notification.create({
+            receiver: otherPartyId,
+            sender: req.user._id,
+            type: "TRADE_SHIPPED",
+            message: `สินค้าของคุณถูกจัดส่งแล้ว! เลขพัสดุ: ${trackingNumber} (${shippingCompany})`,
+            linkId: trade._id
+        });
+
+        res.status(200).json({ success: true, message: "อัปเดตสถานะจัดส่งสำเร็จ", data: trade });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };

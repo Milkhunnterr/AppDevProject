@@ -4,7 +4,6 @@ import Product from "../models/Product.model.js";
 // ระบบสร้างสินค้าสำหรับลงขาย หรือ เทรด
 export const createProduct = async(req,res) => {
     try{
-        
         const { 
             productName, productDescription, category, 
             condition, tradeType, price, wishlist, 
@@ -45,7 +44,7 @@ export const getAllProducts = async(req,res) => {
         if (search) query.productName = { $regex: search, $options: "i" };
 
         const products = await Product.find(query)
-            .populate("ownerId", "username profilePic") 
+            .populate("ownerId", "username imageProfile") // ✅ แก้เป็น imageProfile ตาม Model
             .sort({ createdAt: -1 });
 
         res.status(200).json({ success: true, count: products.length, data: products });
@@ -62,7 +61,7 @@ export const getProductById = async (req,res) => {
             req.params.id,
             {$inc:{views:1}},
             {new:true}
-        ).populate("ownerId" , "username email");
+        ).populate("ownerId" , "username email imageProfile");
 
         if (!product) {
             return res.status(404).json({ success: false, message: "ไม่พบข้อมูลสินค้านี้" });
@@ -92,13 +91,12 @@ export const updateProduct = async(req,res) => {
     try{
         let product = await Product.findById(req.params.id);
         if(!product){
-            return res.status(404).json({success : false , message : "ไม่พบข้อมูลผู้ใช้"});
+            return res.status(404).json({success : false , message : "ไม่พบข้อมูลสินค้า"});
         }
 
-        if (product.ownerId.toString() !== req.user._id.toString())
-            {
-                return res.status(403).json({ success: false, message: "คุณไม่มีสิทธิ์แก้ไขสินค้านี้" });
-            }
+        if (product.ownerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: "คุณไม่มีสิทธิ์แก้ไขสินค้านี้" });
+        }
 
         product = await Product.findByIdAndUpdate(req.params.id, req.body,
             { new: true, 
@@ -108,7 +106,7 @@ export const updateProduct = async(req,res) => {
         res.status(200).json({ success: true, message: "แก้ไขข้อมูลสำเร็จ!", data: product });
 
     }catch(error){
-        console.log(`updatecontroller errro : ${error}`);
+        console.log(`updatecontroller error : ${error}`);
         res.status(500).json({success:false,message : `Server Error : ${error}`});
     }
 }
@@ -121,7 +119,6 @@ export const deleteProduct = async (req, res) => {
         if (!product) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลสินค้า" });
 
         // 2. 🛡️ ด่านตรวจความปลอดภัย: ใครสั่งลบ?
-        // เช็คว่า "ไม่ใช่เจ้าของ" และ "ไม่ใช่แอดมิน" ใช่หรือไม่? ถ้าใช่ทั้งคู่ เตะออกเลย!
         if (product.ownerId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: "คุณไม่มีสิทธิ์ลบสินค้านี้" });
         }
@@ -135,3 +132,19 @@ export const deleteProduct = async (req, res) => {
         res.status(500).json({ success: false, message: "เกิดข้อผิดพลาด", error: error.message });
     }
 };
+
+// ✅ ระบบใหม่ที่เติมให้: ดึงสินค้าทั้งหมดของร้านค้านั้นๆ (ใช้โชว์ในหน้า Shop Profile)
+export const getProductsByShop = async (req, res) => {
+    try {
+        const { shopId } = req.params;
+
+        const products = await Product.find({ shopId: shopId, status: "AVAILABLE" })
+            .populate("ownerId", "username imageProfile")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({ success: true, count: products.length, data: products });
+    } catch (error) {
+        console.log(`getProductsByShop error : ${error}`);
+        res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
+    }
+}

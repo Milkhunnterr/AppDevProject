@@ -1,147 +1,346 @@
 import User from "../models/User.model.js";
+import Notification from "../models/Notification.model.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
+import redis from "../utils/redis.js"; 
+import sendEmail from "../utils/sendEmail.js"; // 📧 อย่าลืม import ตัวส่งเมลที่นายน้อยทำไว้นะครับ!
 
-// accessToken && refreshToken
+// 🔑 1. ฟังก์ชันสร้าง Token
 export const generateToken = (user) => {
     const accessToken = jwt.sign(
-        {id:user._id , role:user.role},
+        { id: user._id, role: user.role },
         process.env.JWT_ACCESS_TOKEN,
-        {expiresIn:"15m"}
+        { expiresIn: "15m" }
     );
 
     const refreshToken = jwt.sign(
-        {id:uer._id},
+        { id: user._id },
         process.env.JWT_SECRET_TOKEN,
-        {expiresIn:"7d"}
+        { expiresIn: "7d" }
     );
 
-    return {accessToken , refreshToken};
-}
+    return { accessToken, refreshToken };
+};
 
-//ระบบสมัครสมาชิก Register && SignUp
-export const register = async(req,res) => {
-    try{
-        const {username , email , password} = req.body;
+// 📝 2. ระบบสมัครสมาชิก
+export const register = async (req, res) => {
+    try {
+        const { username, email, password } = req.body;
 
-        //เช็คว่าเคยมีการสมัครไปก่อนหน้านี้รึยัง
         const existingUser = await User.findOne({
-            $or : [
-                {username : username},
-                {email:email}
-            ]
+            $or: [{ username: username }, { email: email }]
         });
 
-        if(existingUser){
-            return res.status(400).json({success:false , message:"อีเมลหรือชื่อผู้ใช้นี้ถูกใช้งานไปแล้ว"})
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: "อีเมลหรือชื่อผู้ใช้นี้ถูกใช้งานไปแล้ว" });
         }
 
-        // hashed password
-        const salt = bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(salt,password);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUser = new User ({
-            username:username,
-            email:email,
-            password:hashedPassword
+        const newUser = new User({
+            username: username,
+            email: email,
+            password: hashedPassword
         });
 
         await newUser.save();
 
         res.status(201).json({
-            success:true,
-            message:"สมัครสมาชิกสำเร็จ",
-            user:{id:newUser._id , username:newUser.username , email:newUser.email}
+            success: true,
+            message: "สมัครสมาชิกสำเร็จ",
+            user: { id: newUser._id, username: newUser.username, email: newUser.email }
         });
 
-
-    }catch(error){
-        res.status(500).json({success:false , message:`Server Error : ${error}`});
+    } catch (error) {
+        res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
     }
-}
+};
 
-// ระบบ login
-export const login = async (req,res) => {
-    try{
-        const {identifier , password} = req.body;
+// 🚪 3. ระบบ Login (แบบเทพ: มีฝาก Session ใน Redis)
+export const login = async (req, res) => {
+    try {
+        const { identifier, password } = req.body;
 
-        // หา User จาก email หรือผู้ใช้งาน
         const user = await User.findOne({
-            $or:[
-                {email:identifier},
-                {username:identifier}
-            ]
-        }).select('+password')
+            $or: [{ email: identifier }, { username: identifier }]
+        }).select('+password');
 
-        if(!user){
-            return res.status(404).json({success:false , message : "ไม่พบบัญชีผู้ใข้งาน"})
+        if (!user) {
+            return res.status(404).json({ success: false, message: "ไม่พบบัญชีผู้ใช้งาน" });
         }
 
-        // เช็คสถานะของบัญชี
-        if(user.accountStatus == "suspended"){
-            return res.status(403).json({success:false , message:"บัญชีของคุณถูกระงับ กรุณาติดต่อแอดมิน"})
-        }
-        if(user.accountStatus == "banned"){
-            return res.status(403).json({success:false , message:"บัญชีของคุณถูกแบนถาวร"})
+        if (user.accountStatus === "suspended" || user.accountStatus === "banned") {
+            return res.status(403).json({ success: false, message: `บัญชีของคุณถูก${user.accountStatus === 'banned' ? 'แบน' : 'ระงับ'} กรุณาติดต่อแอดมิน` });
         }
 
-        // เทียบ Password ว่าถูกต้องกับใน Database หรือไม่
-        const isMatch = await bcrypt.compare(password , user.password);
-        if(!isMatch){
-            return res.status(401).json({success:false , message:"รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง"})
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "รหัสผ่านไม่ถูกต้อง" });
         }
 
         user.lastLogin = Date.now();
         await user.save();
 
+        const { accessToken, refreshToken } = generateToken(user);
+
+        // 📥 ฝาก Session ไว้ใน Redis (7 วัน)
+        await redis.set(`session:${user._id}`, refreshToken, "EX", 604800);
+
+        res.cookie("accessToken", accessToken, { httpOnly: true, secure: true, sameSite: "strict" });
+        res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true, sameSite: "strict" });
+
         res.status(200).json({
             success: true,
             message: "เข้าสู่ระบบสำเร็จ",
-            accessToken: accessToken,
-            refreshToken: refreshToken,
+            accessToken,
+            refreshToken,
             user: { id: user._id, username: user.username, email: user.email, role: user.role }
         });
 
-    }catch(error){
-        res.status(500).json({success:false , message:`Server Error : ${error}`});
+    } catch (error) {
+        res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
     }
-}
+};
 
-export const getMe = async(req,res) => {
-    try{
+// 👤 4. ดึงข้อมูลตัวเอง
+export const getMe = async (req, res) => {
+    try {
         const user = await User.findById(req.user._id);
-        res.status(200).json({success:true , data:user});
-    }catch(error){
-        res.status(500).json({success:false , message:`Server Error : ${error}`});
+        res.status(200).json({ success: true, data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
     }
-}
+};
 
-// ระบบอัปเดตรหัสผ่าน
-export const updatePassword = async(req,res) => {
-    try{
+// 🚪 5. ระบบออกจากระบบ
+export const logout = async (req, res) => {
+    try {
+        const accessToken = req.cookies.accessToken || req.headers.authorization?.split(" ")[1];
+        const userId = req.user?._id;
 
-    }catch(error){
+        if (accessToken) {
+            await redis.set(`blacklist:${accessToken}`, "true", "EX", 900);
+        }
 
+        if (userId) {
+            await redis.del(`session:${userId}`);
+        }
+
+        res.clearCookie("accessToken");
+        res.clearCookie("refreshToken");
+        res.status(200).json({ success: true, message: "ออกจากระบบเรียบร้อยแล้ว" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
     }
-}
+};
 
+// 🔄 6. ระบบต่ออายุ Token
+export const refreshToken = async (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
-// เมื่อลืมรหัสผ่าน
-export const forgotPassword = async(req,res) => {
-    try{
+        if (!refreshToken) {
+            return res.status(401).json({ success: false, message: "ไม่พบ Refresh Token" });
+        }
 
-    }catch(error){
-
-    }
-}
-
-
-// ตั้งรหัสผ่านใหม่
-export const resetPassword = async(req,res) => {
-    try{
-
-    }catch(error){
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET_TOKEN);
         
+        const storedToken = await redis.get(`session:${decoded.id}`);
+        if (!storedToken || storedToken !== refreshToken) {
+            return res.status(401).json({ message: "เซสชั่นหมดอายุหรือถูกบังคับออกจากระบบ" });
+        }
+
+        const user = await User.findById(decoded.id);
+        if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้งาน" });
+
+        const tokens = generateToken(user);
+
+        res.status(200).json({
+            success: true,
+            accessToken: tokens.accessToken,
+            message: "ต่ออายุเซสชั่นสำเร็จ"
+        });
+    } catch (error) {
+        res.status(401).json({ success: false, message: "Refresh Token หมดอายุหรือผิดพลาด" });
     }
-}
+};
+
+// 🛠️ 7. อัปเดตโปรไฟล์
+export const updateProfile = async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        let updateData = { phoneNumber };
+
+        if (req.file) {
+            updateData.imageProfile = req.file.path; 
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user._id,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({ success: true, message: "อัปเดตโปรไฟล์สำเร็จ", data: updatedUser });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 🔐 8. เปลี่ยนรหัสผ่าน
+export const updatePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user._id).select('+password');
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) return res.status(401).json({ success: false, message: "รหัสผ่านเดิมไม่ถูกต้อง" });
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.status(200).json({ success: true, message: "เปลี่ยนรหัสผ่านสำเร็จ" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 📍 9. จัดการที่อยู่
+export const addAddress = async (req, res) => {
+    try {
+        const { label, addressLine, province, zipCode, isDefault } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (isDefault) user.address.forEach(addr => addr.isDefault = false);
+
+        user.address.push({ label, addressLine, province, zipCode, isDefault: isDefault || false });
+        await user.save();
+
+        res.status(201).json({ success: true, data: user.address });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const deleteAddress = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        user.address = user.address.filter(addr => addr._id.toString() !== req.params.addressId);
+        await user.save();
+        res.status(200).json({ success: true, data: user.address });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 🕵️ 10. ดูโปรไฟล์คนอื่น
+export const getUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select("-address");
+        if (!user) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลผู้ใช้งาน" });
+        res.status(200).json({ success: true, data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// ➕ 11. ระบบติดตาม / เลิกติดตาม
+export const toggleFollow = async (req, res) => {
+    try {
+        const targetUserId = req.params.id;
+        const myId = req.user._id;
+
+        if (targetUserId === myId.toString()) return res.status(400).json({ message: "ไม่สามารถติดตามตัวเองได้" });
+
+        const targetUser = await User.findById(targetUserId);
+        const me = await User.findById(myId);
+
+        if (!targetUser) return res.status(404).json({ message: "ไม่พบผู้ใช้งาน" });
+
+        const isFollowing = me.following.includes(targetUserId);
+
+        if (isFollowing) {
+            me.following = me.following.filter(id => id.toString() !== targetUserId);
+            targetUser.followers = targetUser.followers.filter(id => id.toString() !== myId.toString());
+        } else {
+            me.following.push(targetUserId);
+            targetUser.followers.push(myId);
+
+            await Notification.create({
+                receiver: targetUserId,
+                sender: myId,
+                type: "NEW_FOLLOWER",
+                message: `${me.username} เริ่มติดตามคุณแล้ว!`
+            });
+        }
+
+        await me.save();
+        await targetUser.save();
+
+        res.status(200).json({ success: true, isFollowing: !isFollowing });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// ✅ 12. ยืนยันอีเมล
+export const verifyEmail = async (req, res) => {
+    try {
+        const user = await User.findByIdAndUpdate(req.user._id, { isEmailVerified: true }, { new: true });
+        res.status(200).json({ success: true, message: "ยืนยันอีเมลสำเร็จ", data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 📧 13. ส่งอีเมลลืมรหัสผ่าน (สร้าง Token ของจริง)
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        
+        if (!user) return res.status(404).json({ success: false, message: "ไม่พบอีเมลในระบบ" });
+
+        // สร้าง Token อายุ 15 นาที เพื่อใช้ในการรีเซ็ตรหัสผ่าน
+        const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET_TOKEN, { expiresIn: "15m" });
+        const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+        // 🚀 สั่งยิงอีเมล!
+        const message = `คุณได้รับอีเมลนี้เนื่องจากมีการขอรีเซ็ตรหัสผ่าน\n\nกรุณาคลิกลิงก์นี้เพื่อดำเนินการต่อ (ลิงก์มีอายุ 15 นาที):\n\n ${resetUrl}`;
+        await sendEmail({
+            email: user.email,
+            subject: "การขอรีเซ็ตรหัสผ่าน (TradeApp)",
+            message: message
+        });
+
+        res.status(200).json({ success: true, message: "ส่งลิงก์รีเซ็ตไปที่อีเมลแล้ว" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการส่งอีเมล: " + error.message });
+    }
+};
+
+// 🔑 14. รีเซ็ตรหัสผ่านตัวจริง (รับ Token จากอีเมล)
+export const resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params; 
+        const { newPassword } = req.body;
+
+        if (!token) return res.status(400).json({ success: false, message: "ไม่พบ Token สำหรับรีเซ็ตรหัสผ่าน" });
+        if (!newPassword) return res.status(400).json({ success: false, message: "กรุณากรอกรหัสผ่านใหม่" });
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
+        const user = await User.findById(decoded.id).select('+password');
+        
+        if (!user) return res.status(404).json({ success: false, message: "ไม่พบผู้ใช้งานนี้" });
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.status(200).json({ success: true, message: "เปลี่ยนรหัสผ่านสำเร็จ! กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่" });
+    } catch (error) {
+        res.status(400).json({ success: false, message: "Token ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาทำรายการใหม่อีกครั้ง" });
+    }
+};
