@@ -1,22 +1,23 @@
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import multer from "multer";
+import "dotenv/config";
 
-// ตั้งค่าการเชื่อมต่อ
+// 🟢 เชื่อมต่อ Cloudinary
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ตั้งค่าที่เก็บรูปภาพ
+// 🟢 ตั้งค่า Multer ให้อัปโหลดขึ้น Cloudinary
 const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: "AppDevProject_Uploads", // ชื่อโฟลเดอร์ใน Cloudinary
-        allowed_formats: ["jpg", "png", "jpeg"],
-    },
+  cloudinary: cloudinary,
+  params: {
+    folder: "AppDevShopLogos", // ชื่อโฟลเดอร์ที่จะไปโผล่ในเว็บ Cloudinary
+    allowed_formats: ["jpg", "png", "jpeg", "webp"], 
+  },
 });
 
-export const upload = multer({ storage });
-export { cloudinary };
+export const uploadCloud = multer({ storage });
+export default cloudinary;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingBag, MessageSquare, Bell, User, Star, Repeat, Users, PackageOpen, LogOut } from 'lucide-react';
+import { Search, ShoppingBag, MessageSquare, Bell, User, Star, Repeat, Users, PackageOpen, LogOut, Store } from 'lucide-react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -8,10 +8,7 @@ const Home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // 🟢 State สำหรับเปิด/ปิด เมนู Dropdown
   const [showDropdown, setShowDropdown] = useState(false);
-
-  // 🟢 ดึงข้อมูล User จาก LocalStorage ที่เราเก็บไว้ตอน Login
   const currentUser = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
@@ -31,14 +28,10 @@ const Home = () => {
     fetchProducts();
   }, []);
 
-  // 🔴 ฟังก์ชันออกจากระบบ
   const handleLogout = async () => {
     try {
-      // ยิง API ไปบอก Backend ว่าขอลบ Cookie
       await axios.post('http://localhost:5000/api/auth/logout', {}, { withCredentials: true });
-      // ลบข้อมูล User ออกจาก LocalStorage
       localStorage.removeItem('user');
-      // เตะกลับไปหน้า Login
       navigate('/login');
     } catch (error) {
       console.error("Logout error", error);
@@ -48,7 +41,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-[#05050f] text-white font-sans pb-10">
       
-      {/* 🟢 Navbar (Header) */}
+      {/* 🟢 Navbar */}
       <nav className="sticky top-0 z-50 bg-[#0a0a16] border-b border-[#2a2a3e] px-4 py-3 shadow-lg">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
           
@@ -72,7 +65,14 @@ const Home = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-5 w-48 justify-end">
+          <div className="flex items-center gap-5 w-auto justify-end">
+            
+            {/* 🌟 ลิงก์เมนูร้านค้าบน Navbar 🌟 */}
+            <Link to="/shops" className="hidden md:flex items-center gap-2 text-gray-300 hover:text-[#8b2cf5] font-medium transition-colors mr-2">
+              <Store className="w-5 h-5" />
+              ร้านค้า
+            </Link>
+
             <div className="relative cursor-pointer hover:text-[#8b2cf5] transition">
               <Bell className="w-6 h-6 text-gray-300" />
             </div>
@@ -81,10 +81,8 @@ const Home = () => {
             </div>
             <div className="h-8 w-px bg-[#2a2a3e] mx-1"></div>
             
-            {/* 🟢 โซน Profile & Dropdown */}
             <div className="relative">
               {currentUser ? (
-                // ถ้าล็อกอินแล้ว โชว์ปุ่มที่มีชื่อ และกดเปิด Dropdown ได้
                 <div 
                   className="flex items-center gap-2 cursor-pointer group"
                   onClick={() => setShowDropdown(!showDropdown)}
@@ -96,7 +94,6 @@ const Home = () => {
                     {currentUser.username}
                   </span>
 
-                  {/* 🔽 Dropdown Menu */}
                   {showDropdown && (
                     <div className="absolute right-0 top-12 w-48 bg-[#12121e] border border-[#2a2a3e] rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                       <div className="px-4 py-3 border-b border-[#2a2a3e] bg-[#0a0a16]">
@@ -118,7 +115,6 @@ const Home = () => {
                   )}
                 </div>
               ) : (
-                // ถ้ายังไม่ล็อกอิน โชว์ไอคอนเปล่าๆ กดแล้วไปหน้า Login
                 <Link to="/login" className="flex items-center gap-2 cursor-pointer hover:text-[#8b2cf5] transition group">
                   <div className="w-9 h-9 rounded-full bg-[#151522] border-2 border-[#2a2a3e] flex items-center justify-center overflow-hidden group-hover:border-[#8b2cf5]">
                      <User className="w-5 h-5 text-gray-400 group-hover:text-white" />
@@ -159,6 +155,7 @@ const Home = () => {
               </div>
             </Link>
 
+            {/* 🌟 กล่องลิงก์ร้านค้า (มีอยู่แล้ว แค่เน้นย้ำว่าอันนี้ก็วิ่งไป /shops) 🌟 */}
             <Link to="/shops" className="flex-1 bg-[#12121e] rounded-xl border border-[#2a2a3e] p-6 flex items-center justify-center gap-4 hover:border-[#4361ee] cursor-pointer transition group relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-[#4361ee]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="p-3 bg-[#0a1128] rounded-full border border-[#4361ee]/30">
@@ -173,7 +170,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 🟢 3. Product Grid */}
+      {/* 🟢 Product Grid */}
       <div className="max-w-7xl mx-auto px-4 mt-10">
         <h2 className="text-xl font-bold mb-6 border-l-4 border-[#8b2cf5] pl-3">ไอเทมมาใหม่</h2>
 

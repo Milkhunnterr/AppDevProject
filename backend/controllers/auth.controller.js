@@ -58,51 +58,52 @@ export const register = async (req, res) => {
 };
 
 // 🚪 3. ระบบ Login (แบบเทพ: มีฝาก Session ใน Redis)
+// ... (ส่วนบนสุดพวก import และ register เหมือนเดิม) ...
+
+// 🚪 3. ระบบ Login (ฉบับแก้ไขเพื่อให้ localhost เก็บ Cookie ได้)
+// 🚪 3. ระบบ Login (ฉบับสมบูรณ์)
 export const login = async (req, res) => {
     try {
         const { identifier, password } = req.body;
-
         const user = await User.findOne({
             $or: [{ email: identifier }, { username: identifier }]
         }).select('+password');
 
-        if (!user) {
-            return res.status(404).json({ success: false, message: "ไม่พบบัญชีผู้ใช้งาน" });
-        }
+        if (!user) return res.status(404).json({ success: false, message: "ไม่พบบัญชีผู้ใช้งาน" });
 
         if (user.accountStatus === "suspended" || user.accountStatus === "banned") {
-            return res.status(403).json({ success: false, message: `บัญชีของคุณถูก${user.accountStatus === 'banned' ? 'แบน' : 'ระงับ'} กรุณาติดต่อแอดมิน` });
+            return res.status(403).json({ success: false, message: "บัญชีของคุณถูกระงับ" });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: "รหัสผ่านไม่ถูกต้อง" });
-        }
+        if (!isMatch) return res.status(401).json({ success: false, message: "รหัสผ่านไม่ถูกต้อง" });
 
         user.lastLogin = Date.now();
         await user.save();
 
         const { accessToken, refreshToken } = generateToken(user);
-
-        // 📥 ฝาก Session ไว้ใน Redis (7 วัน)
         await redis.set(`session:${user._id}`, refreshToken, "EX", 604800);
 
-        res.cookie("accessToken", accessToken, { httpOnly: true, secure: true, sameSite: "strict" });
-        res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: true, sameSite: "strict" });
+        // ✅ ตั้งค่า Cookie ให้ฝั่ง Frontend (localhost) มองเห็น
+        const cookieOptions = {
+            httpOnly: true,
+            secure: false, // ต้องเป็น false สำหรับ http://localhost
+            sameSite: "lax", // ต้องเป็น lax เพื่อให้ส่งข้ามพอร์ต 5173 -> 5000
+        };
+
+        res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
+        res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
         res.status(200).json({
             success: true,
-            message: "เข้าสู่ระบบสำเร็จ",
-            accessToken,
-            refreshToken,
             user: { id: user._id, username: user.username, email: user.email, role: user.role }
         });
-
     } catch (error) {
-        res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
+// ... (ส่วนที่เหลือ getMe, logout, etc. เหมือนเดิมได้เลย) ...
 // 👤 4. ดึงข้อมูลตัวเอง
 export const getMe = async (req, res) => {
     try {
@@ -116,22 +117,32 @@ export const getMe = async (req, res) => {
 // 🚪 5. ระบบออกจากระบบ
 export const logout = async (req, res) => {
     try {
-        const accessToken = req.cookies.accessToken || req.headers.authorization?.split(" ")[1];
-        const userId = req.user?._id;
+        const accessToken = req.cookies.accessToken;
+        const refreshToken = req.cookies.refreshToken;
 
+        // 🛡️ ล้างข้อมูลใน Redis (ถ้ามี Token)
         if (accessToken) {
             await redis.set(`blacklist:${accessToken}`, "true", "EX", 900);
         }
-
-        if (userId) {
-            await redis.del(`session:${userId}`);
+        
+        // ดึง userId จาก token โดยตรงเพื่อความชัวร์ (กรณี protectRoute ไม่ทำงาน)
+        if (refreshToken) {
+            try {
+                const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET_TOKEN);
+                await redis.del(`session:${decoded.id}`);
+            } catch (err) {
+                // ถ้า token เน่าก็ข้ามไป
+            }
         }
 
-        res.clearCookie("accessToken");
-        res.clearCookie("refreshToken");
-        res.status(200).json({ success: true, message: "ออกจากระบบเรียบร้อยแล้ว" });
+        // ✅ สั่งลบ Cookie ใน Browser ทันที (ต้องใส่ options ให้เหมือนตอนสร้าง)
+        const clearOptions = { httpOnly: true, secure: false, sameSite: "lax" };
+        res.clearCookie("accessToken", clearOptions);
+        res.clearCookie("refreshToken", clearOptions);
+
+        return res.status(200).json({ success: true, message: "ออกจากระบบเรียบร้อยแล้ว" });
     } catch (error) {
-        res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -208,16 +219,14 @@ export const updatePassword = async (req, res) => {
 };
 
 // 📍 9. จัดการที่อยู่
+// 📍 9. จัดการที่อยู่ (เพิ่มส่วนนี้เข้าไป Server จะหาย Crash ทันที)
 export const addAddress = async (req, res) => {
     try {
         const { label, addressLine, province, zipCode, isDefault } = req.body;
         const user = await User.findById(req.user._id);
-
         if (isDefault) user.address.forEach(addr => addr.isDefault = false);
-
         user.address.push({ label, addressLine, province, zipCode, isDefault: isDefault || false });
         await user.save();
-
         res.status(201).json({ success: true, data: user.address });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -234,7 +243,6 @@ export const deleteAddress = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
 // 🕵️ 10. ดูโปรไฟล์คนอื่น
 export const getUserProfile = async (req, res) => {
     try {

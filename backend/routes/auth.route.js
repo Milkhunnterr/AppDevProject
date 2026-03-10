@@ -5,7 +5,7 @@ import {
     getUserProfile, forgotPassword, resetPassword,
     verifyEmail, refreshToken, toggleFollow 
 } from "../controllers/auth.controller.js";
-import { upload } from "../utils/cloudinary.js";
+import { uploadCloud } from "../utils/cloudinary.js";
 import { protectRoute } from "../middlewares/auth.middleware.js"; 
 
 const router = express.Router();
@@ -20,7 +20,7 @@ router.get("/profile/:id", getUserProfile);
 
 // 🔒 ต้องล็อกอิน
 router.get("/me", protectRoute, getMe);
-router.put("/profile", protectRoute, upload.single("imageProfile"), updateProfile);
+router.put("/profile", protectRoute, uploadCloud.single("imageProfile"), updateProfile);
 router.put("/password", protectRoute, updatePassword);
 router.post("/address", protectRoute, addAddress);
 router.delete("/address/:addressId", protectRoute, deleteAddress);
@@ -30,6 +30,6 @@ router.put("/verify-email", protectRoute, verifyEmail);
 router.put("/follow/:id", protectRoute, toggleFollow); 
 
 // 🚪 ออกจากระบบ
-router.post("/logout", protectRoute, logout); 
+router.post("/logout", logout); 
 
 export default router;
