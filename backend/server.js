@@ -12,7 +12,7 @@ import productRoute from "./routes/product.route.js";
 import tradeRoute from "./routes/trade.route.js"; 
 import communityRoute from "./routes/community.route.js";
 import shopRoute from "./routes/shop.route.js"; // ⚠️ อย่าลืมแก้ชื่อไฟล์ shop.roue.js เป็น shop.route.js นะครับ!
-import chatRoute from "./routes/chat.route.js";
+import chatRoutes from "./routes/chat.route.js"; // 🟢 เพิ่มบรรทัดนี้ลงไป
 import notificationRoute from "./routes/notification.route.js";
 import reviewRoute from "./routes/review.route.js"; 
 import couponRoute from "./routes/coupon.route.js"; 
@@ -35,7 +35,7 @@ app.use("/api/trades", tradeRoute);
 app.use("/api/community", communityRoute);
 app.use("/api/shops", shopRoute);
 app.use("/api/notifications", notificationRoute);
-app.use("/api/chats", chatRoute);
+app.use("/api/chats", chatRoutes); // บรรทัดนี้ถูกต้องแล้ว แต่มันต้องการบรรทัด Import ด้านบนถึงจะทำงานได้
 app.use("/api/reviews", reviewRoute); 
 app.use("/api/coupons", couponRoute); 
 

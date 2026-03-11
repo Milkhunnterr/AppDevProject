@@ -56,11 +56,6 @@ export const register = async (req, res) => {
         res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
     }
 };
-
-// 🚪 3. ระบบ Login (แบบเทพ: มีฝาก Session ใน Redis)
-// ... (ส่วนบนสุดพวก import และ register เหมือนเดิม) ...
-
-// 🚪 3. ระบบ Login (ฉบับแก้ไขเพื่อให้ localhost เก็บ Cookie ได้)
 // 🚪 3. ระบบ Login (ฉบับสมบูรณ์)
 export const login = async (req, res) => {
     try {
@@ -218,7 +213,6 @@ export const updatePassword = async (req, res) => {
     }
 };
 
-// 📍 9. จัดการที่อยู่
 // 📍 9. จัดการที่อยู่ (เพิ่มส่วนนี้เข้าไป Server จะหาย Crash ทันที)
 export const addAddress = async (req, res) => {
     try {
@@ -243,10 +237,14 @@ export const deleteAddress = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-// 🕵️ 10. ดูโปรไฟล์คนอื่น
+// 🕵️ 10. ดูโปรไฟล์คนอื่น (ฉบับอัปเกรด: ดึงข้อมูลผู้ติดตาม/กำลังติดตามออกมาด้วย)
 export const getUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select("-address");
+        const user = await User.findById(req.params.id)
+            .select("-address -password") // ไม่ส่งรหัสผ่านและที่อยู่
+            .populate("followers", "username imageProfile") // ดึงข้อมูลผู้ติดตาม (ชื่อ+รูป)
+            .populate("following", "username imageProfile"); // ดึงข้อมูลกำลังติดตาม (ชื่อ+รูป)
+
         if (!user) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลผู้ใช้งาน" });
         res.status(200).json({ success: true, data: user });
     } catch (error) {
@@ -350,5 +348,25 @@ export const resetPassword = async (req, res) => {
         res.status(200).json({ success: true, message: "เปลี่ยนรหัสผ่านสำเร็จ! กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่" });
     } catch (error) {
         res.status(400).json({ success: false, message: "Token ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาทำรายการใหม่อีกครั้ง" });
+    }
+};
+
+// 👥 15. ดึงรายชื่อเพื่อน (Mutual Follow เท่านั้น)
+export const getFriends = async (req, res) => {
+    try {
+        const myId = req.user._id;
+        const me = await User.findById(myId);
+
+        // หาคนที่อยู่ในทั้งรายชื่อ followers และ following ของเรา
+        const friendIds = me.following.filter(id => 
+            me.followers.includes(id)
+        );
+
+        const friends = await User.find({ _id: { $in: friendIds } })
+            .select("username imageProfile accountStatus");
+
+        res.status(200).json({ success: true, data: friends });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };
