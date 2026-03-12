@@ -105,7 +105,25 @@ export const updateProduct = async(req,res) => {
             return res.status(403).json({ success: false, message: "คุณไม่มีสิทธิ์แก้ไขสินค้านี้" });
         }
 
-        product = await Product.findByIdAndUpdate(req.params.id, req.body,
+        // 🟢 จัดการเรื่องรูปภาพ (ถ้ามีการเปลี่ยน)
+        let updateData = { ...req.body };
+        
+        if (req.file) {
+            // 1. ลบรูปเก่าออกก่อน (ถ้ามี)
+            if (product.images && product.images.length > 0) {
+                product.images.forEach(imgUrl => {
+                    const filename = imgUrl.split('/').pop();
+                    const filePath = path.join(process.cwd(), "uploads", filename);
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                });
+            }
+            // 2. ใส่รูปใหม่เข้าไป
+            updateData.images = [`http://localhost:5000/uploads/${req.file.filename}`];
+        }
+
+        product = await Product.findByIdAndUpdate(req.params.id, updateData,
             { new: true, 
               runValidators: true 
             });

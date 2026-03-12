@@ -30,7 +30,7 @@ router.get("/:id", getProductById);
 // 🔒 ต้องล็อกอิน
 // 🟢 3. แทรกรปภ. upload.single("image") เข้าไปก่อนเรียก createProduct
 router.post("/", protectRoute, upload.single("image"), createProduct);
-router.put("/:id", protectRoute, updateProduct);
+router.put("/:id", protectRoute, upload.single("image"), updateProduct);
 router.delete("/:id", protectRoute, deleteProduct);
 
 export default router;

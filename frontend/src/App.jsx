@@ -8,6 +8,7 @@ import CreateShop from './pages/CreateShop';
 import Shops from './pages/Shops';
 import ShopDetail from './pages/ShopDetail'; // 🟢 เพิ่ม Import หน้ารายละเอียดร้านค้า
 import ProductDetail from './pages/ProductDetail';
+import EditProduct from './pages/EditProduct';
 import Cart from './pages/Cart';
 import Community from './pages/Community';
 import Chat from './pages/Chat';
@@ -28,7 +29,8 @@ function App() {
         {/* 🟢 Route สำหรับหน้ารวมร้านค้า และ หน้ารายละเอียดร้านค้า */}
         <Route path="/shops" element={<Shops />} />
         <Route path="/shops/:id" element={<ShopDetail />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
+         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/product/edit/:id" element={<EditProduct />} />
         
         <Route path="/community" element={<Community />} />
         <Route path="/chat" element={<Chat />} />

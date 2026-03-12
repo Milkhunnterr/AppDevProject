@@ -28,7 +28,13 @@ const ProductDetail = () => {
   if (loading) return <div className="min-h-screen flex justify-center items-center bg-[#05050f]"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#8b2cf5]"></div></div>;
   if (!product) return <div className="min-h-screen flex justify-center items-center bg-[#05050f] text-white">ไม่พบข้อมูลสินค้านี้</div>;
 
+  const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+  const myId = String(currentUser?.id || currentUser?._id || "");
+  const ownerId = String(product.ownerId?._id || product.ownerId || "");
+  const isOwner = myId && ownerId && myId === ownerId;
+
   const handleAddToCart = () => {
+    if (isOwner) return;
     const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
     const itemInCart = existingCart.find(item => item._id === product._id);
     
@@ -43,6 +49,7 @@ const ProductDetail = () => {
   };
 
   const handleChatWithShop = () => {
+    if (isOwner) return;
     navigate('/chat', {
       state: {
         receiverId: product.ownerId?._id || product.ownerId,
@@ -146,22 +153,33 @@ const ProductDetail = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-4">
-             <button 
-                onClick={handleAddToCart}
-                className="py-4 bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(139,44,245,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
-             >
-                <ShoppingBag className="w-5 h-5" /> ซื้อทันที
-             </button>
-             <button 
-                onClick={handleChatWithShop}
-                className="py-4 bg-[#151522] border border-[#2a2a3e] hover:border-[#8b2cf5] rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
-             >
-                <MessageSquare className="w-5 h-5" /> แชทคุย
-             </button>
+          <div className="grid grid-cols-1 gap-4">
+             {isOwner ? (
+                <button 
+                  onClick={() => navigate(`/product/edit/${product._id}`)}
+                  className="py-4 bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(139,44,245,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  แก้ไขข้อมูลสินค้าของคุณ
+                </button>
+             ) : (
+               <div className="grid grid-cols-2 gap-4">
+                 <button 
+                    onClick={handleAddToCart}
+                    className="py-4 bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(139,44,245,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                 >
+                    <ShoppingBag className="w-5 h-5" /> ซื้อทันที
+                 </button>
+                 <button 
+                    onClick={handleChatWithShop}
+                    className="py-4 bg-[#151522] border border-[#2a2a3e] hover:border-[#8b2cf5] rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+                 >
+                    <MessageSquare className="w-5 h-5" /> แชทคุย
+                 </button>
+               </div>
+             )}
           </div>
           
-          {product.tradeType !== 'SELL_ONLY' && (
+          {!isOwner && product.tradeType !== 'SELL_ONLY' && (
             <button className="w-full py-4 bg-[#0a0a16] border-2 border-dashed border-[#8b2cf5]/50 hover:border-[#8b2cf5] hover:bg-[#8b2cf5]/5 text-[#8b2cf5] rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3">
                <Repeat className="w-6 h-6" /> ยื่นข้อเสนอแลกเปลี่ยน (TRADE)
             </button>
