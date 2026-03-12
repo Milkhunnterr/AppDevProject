@@ -1,13 +1,12 @@
 import express from "express";
 import { sendMessage, getMyChats, getMessages } from "../controllers/chat.controller.js";
-// ✅ เปลี่ยนชื่อจาก verifyToken เป็น protectRoute
 import { protectRoute } from "../middlewares/auth.middleware.js"; 
 
 const router = express.Router();
 
-// ✅ เปลี่ยน verifyToken เป็น protectRoute ให้หมด
-router.post("/send", protectRoute, sendMessage); 
-router.get("/inbox", protectRoute, getMyChats); 
+// 🟢 ปรับให้ตรงกับ Frontend ที่เรียกใช้
+router.post("/", protectRoute, sendMessage);  // ยิงมาที่ /api/chats เพื่อส่งข้อความ
+router.get("/", protectRoute, getMyChats);     // ยิงมาที่ /api/chats เพื่อดึงรายการแชท
 router.get("/:chatId", protectRoute, getMessages); 
 
 export default router;

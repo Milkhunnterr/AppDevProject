@@ -3,12 +3,17 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
-import Settings from './pages/Settings'; 
+import Settings from './pages/Settings';
 import CreateShop from './pages/CreateShop';
-import Shops from './pages/Shops'; 
-
-// 🟢 1. Import หน้า Chat เข้ามา (เอาคอมเมนต์ออกแล้ว)
+import Shops from './pages/Shops';
+import ShopDetail from './pages/ShopDetail'; // 🟢 เพิ่ม Import หน้ารายละเอียดร้านค้า
+import ProductDetail from './pages/ProductDetail';
+import EditProduct from './pages/EditProduct';
+import Cart from './pages/Cart';
+import Community from './pages/Community';
 import Chat from './pages/Chat';
+import Payment from './pages/Payment';
+import AccountSetting from './pages/AccountSetting';
 
 function App() {
   return (
@@ -18,12 +23,21 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:id" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/create-shop" element={<CreateShop />} />
-        <Route path="/shops" element={<Shops />} />
         
-        {/* 🟢 2. เปิดใช้งาน Route สำหรับหน้า Chat */}
+        {/* 🟢 Route สำหรับหน้ารวมร้านค้า และ หน้ารายละเอียดร้านค้า */}
+        <Route path="/shops" element={<Shops />} />
+        <Route path="/shops/:id" element={<ShopDetail />} />
+         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/product/edit/:id" element={<EditProduct />} />
+        
+        <Route path="/community" element={<Community />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/payment" element={<Payment />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/account-settings" element={<AccountSetting />} />
       </Routes>
     </BrowserRouter>
   );

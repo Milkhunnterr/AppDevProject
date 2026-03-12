@@ -188,7 +188,11 @@ const Home = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {products.map((item) => (
-              <div key={item._id} className="bg-[#12121e] rounded-md border border-[#2a2a3e] overflow-hidden hover:border-[#8b2cf5] hover:-translate-y-1 transition-all cursor-pointer group flex flex-col">
+              <div 
+                key={item._id} 
+                className="bg-[#12121e] rounded-md border border-[#2a2a3e] overflow-hidden hover:border-[#8b2cf5] hover:-translate-y-1 transition-all cursor-pointer group flex flex-col"
+                onClick={() => navigate(`/product/${item._id}`)}
+              >
                 <div className="aspect-square bg-[#1c1c2b] relative overflow-hidden flex items-center justify-center">
                   <div className="absolute top-2 left-2 px-2 py-1 bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] rounded text-[10px] font-bold text-white z-10">
                     {item.tradeType === 'TRADE_ONLY' ? 'TRADE ONLY' : item.tradeType === 'SELL_ONLY' ? 'SELL ONLY' : 'SELL & TRADE'}
