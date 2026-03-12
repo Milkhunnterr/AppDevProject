@@ -1,5 +1,7 @@
 import User from "../models/User.model.js";
 import Product from "../models/Product.model.js";
+import fs from "fs";
+import path from "path";
 
 // ระบบสร้างสินค้าสำหรับลงขาย หรือ เทรด
 export const createProduct = async(req,res) => {
@@ -7,10 +9,15 @@ export const createProduct = async(req,res) => {
         const { 
             productName, productDescription, category, 
             condition, tradeType, price, wishlist, 
-            images, tags, shopId 
+            tags, shopId 
         } = req.body;
 
-        //สร้างสินค้าใหม่ และเอาไอดีของคนที่ login มาใส่
+        // 🟢 เช็คว่ามีการส่งไฟล์รูปมาไหม ถ้ามีให้สร้างลิงก์รูปภาพ
+        let imageUrls = [];
+        if (req.file) {
+            imageUrls.push(`http://localhost:5000/uploads/${req.file.filename}`);
+        }
+
         const newProduct = await Product.create({
             ownerId: req.user._id,
             shopId: shopId, 
@@ -21,7 +28,7 @@ export const createProduct = async(req,res) => {
             tradeType,
             price,
             wishlist,
-            images,
+            images: imageUrls, // 🟢 เอารูปลง Database ตรงนี้!
             tags
         });
 
@@ -123,10 +130,24 @@ export const deleteProduct = async (req, res) => {
             return res.status(403).json({ success: false, message: "คุณไม่มีสิทธิ์ลบสินค้านี้" });
         }
 
-        // 3. สั่งประหาร! (ลบทิ้งออกจาก Database)
+        // 3. 🗑️ ลบรูปออกจากเซิร์ฟเวอร์ด้วย (ถ้ามี)
+        if (product.images && product.images.length > 0) {
+            product.images.forEach(imgUrl => {
+                // แยกชื่อไฟล์ออกมาจาก URL (ตัวอย่าง: http://localhost:5000/uploads/123.jpg)
+                const filename = imgUrl.split('/').pop();
+                const filePath = path.join(process.cwd(), "uploads", filename);
+                
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    console.log(`Deleted file: ${filePath}`);
+                }
+            });
+        }
+
+        // 4. สั่งประหาร! (ลบทิ้งออกจาก Database)
         await product.deleteOne();
 
-        // 4. ส่งข้อความยืนยันการลบ
+        // 5. ส่งข้อความยืนยันการลบ
         res.status(200).json({ success: true, message: "ลบสินค้าเรียบร้อยแล้ว" });
     } catch (error) {
         res.status(500).json({ success: false, message: "เกิดข้อผิดพลาด", error: error.message });

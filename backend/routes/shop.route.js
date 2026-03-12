@@ -1,11 +1,12 @@
 import express from "express";
-import { createShop, getAllShops, getShopById, updateShop } from "../controllers/shop.controller.js";
+import { createShop, getAllShops, getShopById, updateShop, getMyShop } from "../controllers/shop.controller.js";
 import { protectRoute } from "../middlewares/auth.middleware.js";
 import { uploadCloud } from "../utils/cloudinary.js"; //
 
 const router = express.Router();
 
 router.get("/", getAllShops);
+router.get("/my-shop", protectRoute, getMyShop);
 router.get("/:id", getShopById);
 
 // 🔒 ต้องล็อกอิน + แนบรูป "shopLogo" ให้ตรงกับหน้าบ้าน

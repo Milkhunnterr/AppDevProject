@@ -1,29 +1,31 @@
 import React, { useState } from 'react';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { CreditCard, QrCode, ArrowLeft, Loader2, CheckCircle, ChevronRight, Copy, Lock, Smartphone, Repeat, MapPin } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
 
 const PaymentPage = () => {
     const navigate = useNavigate();
-    const [method, setMethod] = useState(''); // เริ่มแบบไม่เลือกอะไร
+    const location = useLocation();
+    
+    // ดึงข้อมูลจากตะกร้าที่ส่งมา
+    const { totalAmount, items } = location.state || { totalAmount: 0, items: [] };
+
+    const [method, setMethod] = useState(''); 
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [quantity, setQuantity] = useState(1);
-
-    // สมมติราคาต่อหน่วย
-    const unitPrice = 850;
-    const totalPrice = unitPrice * quantity;
-
-    const handleQuantityChange = (newQty) => {
-        setQuantity(newQty);
-    };
 
     const handlePayment = (e) => {
         e.preventDefault();
-        // จำลองการโหลดประมวลผล 2 วินาที
+        if (!method) {
+            alert('กรุณาเลือกช่องทางการชำระเงิน');
+            return;
+        }
+        
         setIsProcessing(true);
         setTimeout(() => {
             setIsProcessing(false);
-            setIsSuccess(true); // เปลี่ยนเป็นหน้า Success
+            setIsSuccess(true); 
+            // Clear cart after success
+            localStorage.removeItem('cart');
         }, 2000);
     };
 
@@ -84,48 +86,37 @@ const PaymentPage = () => {
                     </h1>
                 </div>
 
-                {/* บ็อกรายละเอียดสินค้า */}
+                {/* รายการสินค้า */}
                 <div className="mb-8">
-                    <h3 className="text-sm font-bold text-gray-400 mb-4 tracking-wider uppercase">รายละเอียดข้อมูลสินค้า</h3>
-                    <div className="bg-[#12121e] border border-[#2a2a3e] rounded-2xl p-6 relative min-h-[140px] flex items-start gap-6">
-                        <div className="w-24 h-24 bg-[#0a0a16] rounded-xl border border-[#2a2a3e] flex items-center justify-center overflow-hidden shrink-0">
-                            <img src="https://via.placeholder.com/300" alt="Product" className="w-full h-full object-cover opacity-90" />
-                        </div>
-                        <div className="flex-1 pr-24">
-                            <h3 className="font-bold text-white text-xl mb-1">สินค้าตัวอย่าง Premium Edition</h3>
-                            <p className="text-sm text-gray-400">ขนาด: XL | สี: Space Gray</p>
-                        </div>
-
-                        {/* ปุ่ม + - กลม กลางขวา */}
-                        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3 bg-[#0a0a16] border border-[#2a2a3e] rounded-full p-1 shadow-lg">
-                            <button
-                                onClick={() => handleQuantityChange(Math.max(1, quantity - 1))}
-                                className="w-8 h-8 flex items-center justify-center bg-[#151522] border border-[#2a2a3e] rounded-full text-gray-400 hover:text-white hover:border-[#4361ee] transition-all"
-                            >
-                                −
-                            </button>
-                            <span className="w-6 text-center font-mono text-base font-bold text-white">{quantity}</span>
-                            <button
-                                onClick={() => handleQuantityChange(quantity + 1)}
-                                className="w-8 h-8 flex items-center justify-center bg-[#151522] border border-[#2a2a3e] rounded-full text-gray-400 hover:text-white hover:border-[#4361ee] transition-all"
-                            >
-                                +
-                            </button>
-                        </div>
-
-                        {/* ราคา ล่างขวา */}
-                        <div className="absolute right-6 bottom-4">
-                            <p className="text-base font-bold text-[#4361ee]">
-                                ฿{unitPrice.toLocaleString()} <span className="text-xs text-gray-500 font-normal">/ ชิ้น</span>
-                            </p>
-                        </div>
+                    <h3 className="text-sm font-bold text-gray-400 mb-4 tracking-wider uppercase">รายการสินค้าที่คุณสั่งซื้อ</h3>
+                    <div className="space-y-4">
+                        {items && items.length > 0 ? (
+                            items.map((item, idx) => (
+                                <div key={idx} className="bg-[#12121e] border border-[#2a2a3e] rounded-2xl p-4 flex items-center gap-4">
+                                    <div className="w-16 h-16 bg-[#0a0a16] rounded-xl border border-[#2a2a3e] flex items-center justify-center overflow-hidden shrink-0">
+                                        <img src={item.images?.[0] || 'https://via.placeholder.com/150'} alt={item.productName} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-white text-sm mb-1">{item.productName}</h3>
+                                        <p className="text-xs text-gray-400">จำนวน: {item.quantity} | ฿{item.price.toLocaleString()}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-[#4361ee]">฿{(item.price * item.quantity).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-10 text-center text-gray-500 bg-[#12121e] rounded-2xl border border-[#2a2a3e]">
+                                ไม่มีรายการสินค้า
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <div className="mb-8 flex justify-between items-center bg-[#12121e] border border-[#2a2a3e] rounded-2xl p-6">
                     <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">ยอดชำระสุทธิ</span>
                     <span className="text-3xl font-bold text-white">
-                        ฿{totalPrice.toLocaleString()}
+                        ฿{totalAmount.toLocaleString()}
                     </span>
                 </div>
 
@@ -269,7 +260,7 @@ const PaymentPage = () => {
                                 <Loader2 className="w-5 h-5 animate-spin" /> กำลังประมวลผล...
                             </>
                         ) : (
-                            `ชำระเงิน ฿${totalPrice.toLocaleString()}`
+                            `ชำระเงิน ฿${totalAmount.toLocaleString()}`
                         )}
                     </button>
                     <div className="text-center text-xs text-gray-500 flex items-center justify-center gap-1 mt-4">

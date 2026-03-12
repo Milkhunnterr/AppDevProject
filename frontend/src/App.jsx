@@ -6,6 +6,9 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import CreateShop from './pages/CreateShop';
 import Shops from './pages/Shops';
+import ShopDetail from './pages/ShopDetail'; // 🟢 เพิ่ม Import หน้ารายละเอียดร้านค้า
+import ProductDetail from './pages/ProductDetail';
+import Cart from './pages/Cart';
 import Community from './pages/Community';
 import Chat from './pages/Chat';
 import Payment from './pages/Payment';
@@ -17,19 +20,20 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-
-        {/* 🟢 ดูโปรไฟล์ตัวเอง */}
         <Route path="/profile" element={<Profile />} />
-
-        {/* 🟢 ดูโปรไฟล์คนอื่น (รับ ID มาด้วย) */}
         <Route path="/profile/:id" element={<Profile />} />
-
         <Route path="/settings" element={<Settings />} />
         <Route path="/create-shop" element={<CreateShop />} />
+        
+        {/* 🟢 Route สำหรับหน้ารวมร้านค้า และ หน้ารายละเอียดร้านค้า */}
         <Route path="/shops" element={<Shops />} />
+        <Route path="/shops/:id" element={<ShopDetail />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        
         <Route path="/community" element={<Community />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/payment" element={<Payment />} />
+        <Route path="/cart" element={<Cart />} />
       </Routes>
     </BrowserRouter>
   );

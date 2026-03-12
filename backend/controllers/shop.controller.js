@@ -91,3 +91,16 @@ export const updateShop = async (req, res) => {
         res.status(500).json({ success: false, message: `Server Error: ${error.message}` });
     }
 };
+
+// 🏠 5. ดึงข้อมูลร้านค้าของตัวเอง
+export const getMyShop = async (req, res) => {
+    try {
+        const shop = await Shop.findOne({ ownerId: req.user._id });
+        if (!shop) {
+            return res.status(200).json({ success: true, hasShop: false });
+        }
+        res.status(200).json({ success: true, hasShop: true, data: shop });
+    } catch (error) {
+        res.status(500).json({ success: false, message: `Server Error: ${error.message}` });
+    }
+};

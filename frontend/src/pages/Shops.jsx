@@ -6,15 +6,24 @@ import axios from 'axios';
 const Shops = () => {
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [myShop, setMyShop] = useState(null);
 
-  // ดึงข้อมูลร้านค้า (ถ้ามี API แล้ว)
+  const currentUser = JSON.parse(localStorage.getItem('user'));
+
   useEffect(() => {
     const fetchShops = async () => {
       try {
-        // เปลี่ยน URL ตาม API จริงของคุณได้เลยครับ
         const response = await axios.get('http://localhost:5000/api/shops'); 
         if (response.data.success) {
           setShops(response.data.data);
+        }
+        
+        // ดึงข้อมูลร้านของตัวเองถ้าล็อกอินอยู่
+        if (currentUser) {
+          const myShopRes = await axios.get('http://localhost:5000/api/shops/my-shop', { withCredentials: true });
+          if (myShopRes.data.success && myShopRes.data.hasShop) {
+            setMyShop(myShopRes.data.data);
+          }
         }
       } catch (error) {
         console.error("Error fetching shops:", error);
@@ -22,18 +31,14 @@ const Shops = () => {
         setLoading(false);
       }
     };
-
     fetchShops();
   }, []);
 
   return (
     <div className="min-h-screen bg-[#05050f] text-white font-sans pb-10">
-      
-      {/* 🟢 Header Section ของหน้า Shops */}
+      {/* 🟢 Header Section */}
       <div className="sticky top-0 z-50 bg-[#0a0a16] border-b border-[#2a2a3e] px-4 py-4 shadow-lg">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          
-          {/* ซ้าย: ปุ่มกลับ และ ชื่อหน้า */}
           <div className="flex items-center gap-4">
             <Link to="/" className="p-2 bg-[#151522] rounded-full hover:bg-[#2a2a3e] hover:text-[#8b2cf5] transition-colors cursor-pointer">
               <ArrowLeft className="w-5 h-5" />
@@ -44,7 +49,6 @@ const Shops = () => {
             </div>
           </div>
 
-          {/* กลาง: ช่องค้นหาร้านค้า (ซ่อนในมือถือ) */}
           <div className="hidden md:block flex-1 max-w-xl relative">
             <input 
               type="text" 
@@ -56,28 +60,33 @@ const Shops = () => {
             </button>
           </div>
 
-          {/* 🌟 ขวา: ปุ่มสร้างร้านค้า 🌟 */}
           <div>
-            <Link to="/create-shop">
-              <button className="flex items-center gap-1.5 bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] text-white text-sm font-bold py-2.5 px-5 rounded-full hover:shadow-[0_0_15px_rgba(139,44,245,0.4)] transition transform hover:-translate-y-0.5">
-                <Plus className="w-4 h-4 font-bold" />
-                <span className="hidden sm:inline">สร้างร้านค้า</span>
-              </button>
-            </Link>
+            {myShop ? (
+              <Link to={`/shops/${myShop._id}`}>
+                <button className="flex items-center gap-1.5 bg-gradient-to-r from-[#4361ee] to-[#8b2cf5] text-white text-sm font-bold py-2.5 px-5 rounded-full hover:shadow-[0_0_15px_rgba(67,97,238,0.4)] transition transform hover:-translate-y-0.5">
+                  <Store className="w-4 h-4 font-bold" />
+                  <span className="hidden sm:inline">จัดการร้านค้าของฉัน</span>
+                </button>
+              </Link>
+            ) : (
+              <Link to="/create-shop">
+                <button className="flex items-center gap-1.5 bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] text-white text-sm font-bold py-2.5 px-5 rounded-full hover:shadow-[0_0_15px_rgba(139,44,245,0.4)] transition transform hover:-translate-y-0.5">
+                  <Plus className="w-4 h-4 font-bold" />
+                  <span className="hidden sm:inline">สร้างร้านค้า</span>
+                </button>
+              </Link>
+            )}
           </div>
-
         </div>
       </div>
 
       {/* 🟢 Body Section */}
       <div className="max-w-7xl mx-auto px-4 mt-8">
-        
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#8b2cf5]"></div>
           </div>
         ) : shops.length === 0 ? (
-          /* กรณีที่ยังไม่มีร้านค้าเลย */
           <div className="flex flex-col justify-center items-center py-20 bg-[#12121e] rounded-xl border border-[#2a2a3e] text-gray-400 mt-10">
             <Store className="w-16 h-16 mb-4 text-[#2a2a3e]" />
             <h3 className="text-xl font-medium text-gray-300">ยังไม่มีร้านค้าในระบบ</h3>
@@ -89,23 +98,25 @@ const Shops = () => {
             </Link>
           </div>
         ) : (
-          /* กรณีมีร้านค้าแล้ว แสดงเป็น Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {shops.map((shop) => (
-              <div key={shop._id} className="bg-[#12121e] rounded-xl border border-[#2a2a3e] p-5 hover:border-[#8b2cf5] transition-all cursor-pointer group">
+              // 🟢 เปลี่ยนจาก div เป็น Link และส่งไปที่ URL ร้านค้านั้นๆ
+              <Link 
+                key={shop._id} 
+                to={`/shops/${shop._id}`} 
+                className="block bg-[#12121e] rounded-xl border border-[#2a2a3e] p-5 hover:border-[#8b2cf5] transition-all cursor-pointer group hover:shadow-[0_0_20px_rgba(139,44,245,0.1)]"
+              >
                 <div className="flex items-start gap-4">
-                  {/* รูปร้านค้า */}
                   <div className="w-16 h-16 rounded-full bg-[#1c1c2b] border border-[#2a2a3e] flex-shrink-0 overflow-hidden group-hover:border-[#8b2cf5] transition-colors">
                     {shop.shopImage ? (
                       <img src={shop.shopImage} alt={shop.shopName} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-500">
+                      <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-500 bg-gradient-to-tr from-[#1c1c2b] to-[#2a2a3e]">
                         {shop.shopName?.charAt(0) || 'S'}
                       </div>
                     )}
                   </div>
                   
-                  {/* ข้อมูลร้าน */}
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-white group-hover:text-[#8b2cf5] transition-colors line-clamp-1">
                       {shop.shopName}
@@ -126,12 +137,11 @@ const Shops = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
       </div>
-
     </div>
   );
 };
