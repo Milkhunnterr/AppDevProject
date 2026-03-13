@@ -2,8 +2,8 @@ import User from "../models/User.model.js";
 import Notification from "../models/Notification.model.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import redis from "../utils/redis.js"; 
-import sendEmail from "../utils/sendEmail.js"; // 📧 อย่าลืม import ตัวส่งเมลที่นายน้อยทำไว้นะครับ!
+import redis from "../utils/redis.js";
+import sendEmail from "../utils/SendEmail.js"; // 📧 อย่าลืม import ตัวส่งเมลที่นายน้อยทำไว้นะครับ!
 
 // 🔑 1. ฟังก์ชันสร้าง Token
 export const generateToken = (user) => {
@@ -119,7 +119,7 @@ export const logout = async (req, res) => {
         if (accessToken) {
             await redis.set(`blacklist:${accessToken}`, "true", "EX", 900);
         }
-        
+
         // ดึง userId จาก token โดยตรงเพื่อความชัวร์ (กรณี protectRoute ไม่ทำงาน)
         if (refreshToken) {
             try {
@@ -151,7 +151,7 @@ export const refreshToken = async (req, res) => {
         }
 
         const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET_TOKEN);
-        
+
         const storedToken = await redis.get(`session:${decoded.id}`);
         if (!storedToken || storedToken !== refreshToken) {
             return res.status(401).json({ message: "เซสชั่นหมดอายุหรือถูกบังคับออกจากระบบ" });
@@ -183,14 +183,15 @@ export const refreshToken = async (req, res) => {
 // 🛠️ 7. อัปเดตโปรไฟล์
 export const updateProfile = async (req, res) => {
     try {
-        const { phoneNumber } = req.body;
+        const { phoneNumber, gender, birthday, bio } = req.body;
         let updateData = {};
 
-        if (phoneNumber !== undefined) {
-            updateData.phoneNumber = phoneNumber;
-        }
+        if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+        if (gender !== undefined) updateData.gender = gender;
+        if (birthday !== undefined) updateData.birthday = birthday;
+        if (bio !== undefined) updateData.bio = bio;
         if (req.file) {
-            updateData.imageProfile = req.file.path; 
+            updateData.imageProfile = req.file.path;
         }
 
         const updatedUser = await User.findByIdAndUpdate(
@@ -320,10 +321,12 @@ export const verifyEmail = async (req, res) => {
 // 📧 13. ส่งอีเมลลืมรหัสผ่าน (สร้าง Token ของจริง)
 export const forgotPassword = async (req, res) => {
     try {
-        const { email } = req.body;
-        const user = await User.findOne({ email });
-        
-        if (!user) return res.status(404).json({ success: false, message: "ไม่พบอีเมลในระบบ" });
+        const { email } = req.body; // email field can be username or email
+        const user = await User.findOne({
+            $or: [{ email: email.toLowerCase() }, { username: email }]
+        });
+
+        if (!user) return res.status(404).json({ success: false, message: "ไม่พบผู้ใช้งานหรืออีเมลในระบบ" });
 
         // สร้าง Token อายุ 15 นาที เพื่อใช้ในการรีเซ็ตรหัสผ่าน
         const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET_TOKEN, { expiresIn: "15m" });
@@ -339,14 +342,68 @@ export const forgotPassword = async (req, res) => {
 
         res.status(200).json({ success: true, message: "ส่งลิงก์รีเซ็ตไปที่อีเมลแล้ว" });
     } catch (error) {
-        res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการส่งอีเมล: " + error.message });
+        console.error("Forgot Password Error:", error);
+        let errorMsg = error.message;
+        if (error.message.includes('535')) {
+            errorMsg = "ไม่สามารถเข้าสู่ระบบอีเมลได้ (SMTP Error 535) กรุณาตรวจสอบรหัสผ่านแอป (App Password) ในไฟล์ .env";
+        }
+        res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการส่งอีเมล: " + errorMsg });
+    }
+};
+
+// 🗑️ 14. ลบบัญชีผู้ใช้งาน
+export const deleteAccount = async (req, res) => {
+    try {
+        const { password } = req.body;
+        const user = await User.findById(req.user._id).select("+password");
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "ไม่พบผู้ใช้งาน" });
+        }
+
+        // 🛡️ ตรวจสอบรหัสผ่านก่อนลบ
+        if (!password) {
+            return res.status(400).json({ success: false, message: "กรุณาระบุรหัสผ่านเพื่อยืนยันการลบบัญชี" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "รหัสผ่านไม่ถูกต้อง" });
+        }
+
+        // 🛡️ ถ้าเป็นการตรวจสอบรหัสผ่านอย่างเดียว (Pre-check) ให้หยุดแค่นี้
+        if (req.body.verifyOnly) {
+            return res.status(200).json({ success: true, message: "รหัสผ่านถูกต้อง" });
+        }
+
+        // ลบ User ออกจากฐานข้อมูล
+        await User.findByIdAndDelete(req.user._id);
+
+        // ล้างข้อมูลใน Redis (ดัก Error เพื่อไม่ให้กระทบการลบหลัก)
+        const refreshToken = req.cookies.refreshToken;
+        if (refreshToken) {
+            try {
+                await redis.del(`session:${req.user._id}`);
+            } catch (redisError) {
+                console.error("Redis session cleanup error:", redisError);
+            }
+        }
+
+        // ล้าง Cookie
+        const clearOptions = { httpOnly: true, secure: false, sameSite: "lax" };
+        res.clearCookie("accessToken", clearOptions);
+        res.clearCookie("refreshToken", clearOptions);
+
+        res.status(200).json({ success: true, message: "ลบบัญชีเรียบร้อยแล้ว ขอบคุณที่ใช้บริการเรา" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการลบบัญชี: " + error.message });
     }
 };
 
 // 🔑 14. รีเซ็ตรหัสผ่านตัวจริง (รับ Token จากอีเมล)
 export const resetPassword = async (req, res) => {
     try {
-        const { token } = req.params; 
+        const { token } = req.params;
         const { newPassword } = req.body;
 
         if (!token) return res.status(400).json({ success: false, message: "ไม่พบ Token สำหรับรีเซ็ตรหัสผ่าน" });
@@ -354,7 +411,7 @@ export const resetPassword = async (req, res) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
         const user = await User.findById(decoded.id).select('+password');
-        
+
         if (!user) return res.status(404).json({ success: false, message: "ไม่พบผู้ใช้งานนี้" });
 
         const salt = await bcrypt.genSalt(10);
@@ -374,7 +431,7 @@ export const getFriends = async (req, res) => {
         const me = await User.findById(myId);
 
         // หาคนที่อยู่ในทั้งรายชื่อ followers และ following ของเรา
-        const friendIds = me.following.filter(id => 
+        const friendIds = me.following.filter(id =>
             me.followers.includes(id)
         );
 
