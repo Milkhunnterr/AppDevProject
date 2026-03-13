@@ -650,4 +650,12 @@ function PostCard({ post, currentUser, liked, onLike, onComment, onDeleteComment
     );
 }
 
+export { 
+    PostCard, 
+    Avatar, 
+    timeAgo, 
+    POST_TYPE_LABELS, 
+    TYPE_BADGE_COLORS 
+};
+
 export default Community;

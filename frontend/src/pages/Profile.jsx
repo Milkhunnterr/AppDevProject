@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Star, Package, ShieldCheck, MapPin, Settings, Edit3, Clock, Repeat, Users, MessageCircle, Plus, Check } from 'lucide-react';
+import { ArrowLeft, User, Star, Package, ShieldCheck, MapPin, Settings, Edit3, Clock, Repeat, Users, MessageCircle, Plus, Check, MessageSquare } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import { axiosInstance } from '../utils/axios';
+import { PostCard } from './Community';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ const Profile = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [userPosts, setUserPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
 
   // ดึงข้อมูลตัวเองจาก LocalStorage ไว้เทียบว่าใช่โปรไฟล์เราไหม
   let currentUser = null;
@@ -35,7 +38,7 @@ const Profile = () => {
       setLoading(true);
       try {
         // 🟢 ยิง API ไปดึงข้อมูลโปรไฟล์ (ใช้ route จาก backend นายน้อย)
-        const res = await axios.get(`http://localhost:5000/api/auth/profile/${targetId}`);
+        const res = await axiosInstance.get(`http://localhost:5000/api/auth/profile/${targetId}`);
         if (res.data.success) {
           setProfileData(res.data.data);
           
@@ -55,7 +58,23 @@ const Profile = () => {
       }
     };
 
+    const fetchUserPosts = async () => {
+        setLoadingPosts(true);
+        try {
+            const res = await axiosInstance.get(`/community?userId=${targetId}`);
+            if (res.data.success) {
+                const filteredPosts = res.data.data.filter(post => String(post.author?._id || post.author) === String(targetId));
+                setUserPosts(filteredPosts);
+            }
+        } catch (error) {
+            console.error("Error fetching user posts:", error);
+        } finally {
+            setLoadingPosts(false);
+        }
+    };
+
     fetchProfile();
+    fetchUserPosts(); // เรียกใช้ฟังก์ชันดึงโพสต์ของผู้ใช้
   }, [id, myId, navigate]);
 
   // ตรวจสอบว่านี่คือโปรไฟล์ของเราเองหรือไม่
@@ -90,6 +109,22 @@ const Profile = () => {
               chatType: 'GENERAL'
           }
       });
+  };
+  const handleLikePost = async (postId) => {
+      if (!currentUser) return navigate('/login');
+      try {
+          await axiosInstance.put(`/community/${postId}/like`);
+          setUserPosts(prev => prev.map(p => {
+              if (p._id !== postId) return p;
+              const hasLiked = p.likes.includes(currentUser.id || currentUser._id);
+              return { 
+                  ...p, 
+                  likes: hasLiked 
+                    ? p.likes.filter(uid => String(uid) !== String(currentUser.id || currentUser._id)) 
+                    : [...p.likes, (currentUser.id || currentUser._id)] 
+              };
+          }));
+      } catch (err) { console.error(err); }
   };
 
   if (loading) {
@@ -229,11 +264,11 @@ const Profile = () => {
               {activeTab === 'items' && <div className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-gradient-to-r from-[#8b2cf5] to-[#4361ee]"></div>}
             </button>
             <button 
-              onClick={() => setActiveTab('history')}
-              className={`pb-3 text-sm font-bold transition-all relative ${activeTab === 'history' ? 'text-[#4361ee]' : 'text-gray-500 hover:text-gray-300'}`}
+              onClick={() => setActiveTab('posts')}
+              className={`pb-3 text-sm font-bold transition-all relative ${activeTab === 'posts' ? 'text-[#4361ee]' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              <div className="flex items-center gap-2"><Clock className="w-4 h-4" /> ประวัติการเทรด</div>
-              {activeTab === 'history' && <div className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-gradient-to-r from-[#4361ee] to-[#8b2cf5]"></div>}
+              <div className="flex items-center gap-2"><MessageSquare className="w-4 h-4" /> โพสต์</div>
+              {activeTab === 'posts' && <div className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-gradient-to-r from-[#4361ee] to-[#8b2cf5]"></div>}
             </button>
           </div>
 
@@ -253,12 +288,32 @@ const Profile = () => {
             </div>
           )}
 
-          {activeTab === 'history' && (
-            <div className="bg-[#12121e] border border-[#2a2a3e] rounded-xl p-10 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-[#1c1c2b] rounded-full flex items-center justify-center mb-4">
-                <Repeat className="w-8 h-8 text-[#4361ee]" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">ยังไม่มีประวัติการเทรด</h3>
+          {activeTab === 'posts' && (
+                        <div className="flex flex-col gap-4">
+              {loadingPosts ? (
+                 <div className="flex justify-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#8b2cf5]" /></div>
+              ) : userPosts.length > 0 ? (
+                 userPosts.map(post => (
+                    <PostCard 
+                       key={post._id} 
+                       post={post} 
+                       currentUser={currentUser} 
+                       liked={post.likes?.includes(currentUser?.id || currentUser?._id)} 
+                       onLike={() => handleLikePost(post._id)} 
+                       onComment={() => {}} 
+                       onDeleteComment={() => {}} 
+                       onDeletePost={() => {}} 
+                    />
+                 ))
+              ) : (
+                 <div className="bg-[#12121e] border border-[#2a2a3e] rounded-xl p-10 flex flex-col items-center justify-center text-center">
+                   <div className="w-16 h-16 bg-[#1c1c2b] rounded-full flex items-center justify-center mb-4">
+                     <MessageSquare className="w-8 h-8 text-[#4361ee]" />
+                   </div>
+                   <h3 className="text-lg font-bold text-white mb-2">ยังไม่มีโพสต์</h3>
+                   <p className="text-sm text-gray-400">ผู้ใช้นี้ยังไม่ได้โพสต์อะไรในชุมชน</p>
+                 </div>
+              )}
             </div>
           )}
         </div>
