@@ -14,6 +14,8 @@ import Community from './pages/Community';
 import Chat from './pages/Chat';
 import Payment from './pages/Payment';
 import AccountSetting from './pages/AccountSetting';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -38,6 +40,8 @@ function App() {
         <Route path="/payment" element={<Payment />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/account-settings" element={<AccountSetting />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
       </Routes>
     </BrowserRouter>
   );

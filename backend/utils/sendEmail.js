@@ -4,10 +4,14 @@ const sendEmail = async (options) => {
     // 1. สร้างช่องทางเชื่อมต่อกับเซิร์ฟเวอร์อีเมล (ดึงค่าจากไฟล์ .env)
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
+        port: parseInt(process.env.SMTP_PORT),
+        secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
         auth: {
-            user: process.env.SMTP_EMAIL, // อีเมลของเรา
-            pass: process.env.SMTP_PASSWORD // รหัสผ่าน หรือ App Password (ถ้าใช้ Gmail)
+            user: process.env.SMTP_EMAIL,
+            pass: process.env.SMTP_PASSWORD
+        },
+        tls: {
+            rejectUnauthorized: false // ช่วยให้ส่งผ่านในบางกรณีที่ใบรับรอง SSL มีปัญหา
         }
     });
 

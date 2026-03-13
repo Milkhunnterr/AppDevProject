@@ -3,7 +3,7 @@ import Notification from "../models/Notification.model.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import redis from "../utils/redis.js";
-import sendEmail from "../utils/sendEmail.js"; // 📧 อย่าลืม import ตัวส่งเมลที่นายน้อยทำไว้นะครับ!
+import sendEmail from "../utils/SendEmail.js"; // 📧 อย่าลืม import ตัวส่งเมลที่นายน้อยทำไว้นะครับ!
 
 // 🔑 1. ฟังก์ชันสร้าง Token
 export const generateToken = (user) => {
@@ -321,10 +321,12 @@ export const verifyEmail = async (req, res) => {
 // 📧 13. ส่งอีเมลลืมรหัสผ่าน (สร้าง Token ของจริง)
 export const forgotPassword = async (req, res) => {
     try {
-        const { email } = req.body;
-        const user = await User.findOne({ email });
+        const { email } = req.body; // email field can be username or email
+        const user = await User.findOne({
+            $or: [{ email: email.toLowerCase() }, { username: email }]
+        });
 
-        if (!user) return res.status(404).json({ success: false, message: "ไม่พบอีเมลในระบบ" });
+        if (!user) return res.status(404).json({ success: false, message: "ไม่พบผู้ใช้งานหรืออีเมลในระบบ" });
 
         // สร้าง Token อายุ 15 นาที เพื่อใช้ในการรีเซ็ตรหัสผ่าน
         const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET_TOKEN, { expiresIn: "15m" });
@@ -340,7 +342,12 @@ export const forgotPassword = async (req, res) => {
 
         res.status(200).json({ success: true, message: "ส่งลิงก์รีเซ็ตไปที่อีเมลแล้ว" });
     } catch (error) {
-        res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการส่งอีเมล: " + error.message });
+        console.error("Forgot Password Error:", error);
+        let errorMsg = error.message;
+        if (error.message.includes('535')) {
+            errorMsg = "ไม่สามารถเข้าสู่ระบบอีเมลได้ (SMTP Error 535) กรุณาตรวจสอบรหัสผ่านแอป (App Password) ในไฟล์ .env";
+        }
+        res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดในการส่งอีเมล: " + errorMsg });
     }
 };
 

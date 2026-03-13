@@ -577,6 +577,19 @@ const AccountSetting = () => {
                 {passwordLoading ? 'กำลังอัปเดต...' : 'อัปเดตรหัสผ่าน'}
               </button>
             </div>
+
+            <div className="pt-4 mt-8 border-t border-[#2a2a3e] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#151522]/50 p-6 rounded-2xl">
+              <div className="text-center sm:text-left">
+                <h4 className="font-bold text-gray-200">หากคุณลืมรหัสผ่าน?</h4>
+                <p className="text-xs text-gray-500 mt-1">คุณสามารถขอรับลิงก์รีเซ็ตรหัสผ่านทางอีเมลเพื่อตั้งค่ารหัสผ่านใหม่</p>
+              </div>
+              <Link
+                to="/forgot-password"
+                className="px-6 py-3 bg-[#12121e] border border-[#2a2a3e] text-[#8b2cf5] font-bold text-sm rounded-xl hover:bg-[#1c1c2b] hover:text-white transition-all flex items-center gap-2"
+              >
+                <Lock className="w-4 h-4" /> ใช้หน้าลืมรหัสผ่าน
+              </Link>
+            </div>
           </form>
         );
       case 'address':
