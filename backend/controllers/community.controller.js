@@ -1,4 +1,5 @@
 import Community from "../models/Community.model.js";
+import Notification from "../models/Notification.model.js";
 
 // 📢 1. สร้างโพสต์ใหม่
 export const createPost = async (req, res) => {
@@ -101,15 +102,28 @@ export const likePost = async (req, res) => {
         const post = await Community.findById(req.params.id);
         if (!post) return res.status(404).json({ success: false, message: "ไม่พบโพสต์นี้" });
 
-        const isLiked = post.likes.includes(req.user._id);
+        const userIdStr = req.user._id.toString();
+        const isLiked = post.likes.some(id => id.toString() === userIdStr);
 
         if (isLiked) {
-            post.likes = post.likes.filter(id => id.toString() !== req.user._id.toString());
+            post.likes = post.likes.filter(id => id.toString() !== userIdStr);
         } else {
             post.likes.push(req.user._id);
         }
 
         await post.save();
+
+        // 🔔 สร้างแจ้งเตือนถ้าคนกดไลค์ไม่ใช่เจ้าของโพสต์
+        if (!isLiked && post.author.toString() !== req.user._id.toString()) {
+            await Notification.create({
+                receiver: post.author,
+                sender: req.user._id,
+                type: "NEW_LIKE",
+                message: `${req.user.username || 'มีคน'} ถูกใจโพสต์ของคุณ`,
+                linkId: post._id
+            });
+        }
+
         res.status(200).json({ success: true, message: isLiked ? "เลิกถูกใจแล้ว" : "ถูกใจโพสต์แล้ว", data: post.likes });
     } catch (error) {
         res.status(500).json({ success: false, message: `Server Error : ${error.message}` });
@@ -132,6 +146,17 @@ export const commentOnPost = async (req, res) => {
 
         post.comments.push(newComment);
         await post.save();
+
+        // 🔔 สร้างแจ้งเตือนถ้าคนคอมเมนต์ไม่ใช่เจ้าของโพสต์
+        if (post.author.toString() !== req.user._id.toString()) {
+            await Notification.create({
+                receiver: post.author,
+                sender: req.user._id,
+                type: "NEW_COMMENT",
+                message: `${req.user.username || 'มีคน'} แสดงความคิดเห็นในโพสต์ของคุณ`,
+                linkId: post._id
+            });
+        }
 
         // ดึงข้อมูล User ของคอมเมนต์ที่เพิ่งสร้างเพื่อให้แสดงชื่อ/รูปทันที
         const updatedPost = await Community.findById(post._id).populate({
