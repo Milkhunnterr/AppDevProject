@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Search, Bell, User, Star, Repeat, Users, MessageSquare,
     LogOut, Store, Heart, MessageCircle, Plus, X, ChevronLeft,
     ChevronRight, Image, Send, Flame, BookOpen, ThumbsUp, AlertTriangle,
     PackageSearch, Sparkles, PackageOpen, Check, Camera, Video, Trash2, Share2
 } from 'lucide-react';
-
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../assets/logo0.png';
 
 
@@ -60,6 +59,7 @@ function Avatar({ name, src, size = 9 }) {
 // ---------- main component ----------
 const Community = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const currentUser = JSON.parse(localStorage.getItem('user'));
 
     const [posts, setPosts] = useState([]);
@@ -90,7 +90,6 @@ const Community = () => {
     const [searchText, setSearchText] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [likedPosts, setLikedPosts] = useState(new Set());
     const [friends, setFriends] = useState([]);
 
     const [notifications, setNotifications] = useState([]);
@@ -148,6 +147,34 @@ const Community = () => {
         fetchFriends();
         fetchNotifications();
     }, [activeFilter]);
+    
+    const scrolledPostRef = useRef(null);
+
+    // Scroll to specific post if navigated from notification
+    useEffect(() => {
+        if (!loading && posts.length > 0) {
+            const queryParams = new URLSearchParams(location.search);
+            const postId = queryParams.get('postId');
+            
+            if (postId && scrolledPostRef.current !== postId) {
+                const element = document.getElementById(`post-${postId}`);
+                if (element) {
+                    scrolledPostRef.current = postId; // Mark as scrolled
+                    setTimeout(() => {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Add a highlight effect
+                        element.classList.add('ring-2', 'ring-[#8b2cf5]', 'ring-offset-2', 'ring-offset-[#12121e]', 'transition-all', 'duration-1000');
+                        setTimeout(() => {
+                            element.classList.remove('ring-2', 'ring-[#8b2cf5]', 'ring-offset-2', 'ring-offset-[#12121e]');
+                        }, 3000);
+                        
+                        // Clear the postId from URL so it doesn't scroll again on manual refresh
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }, 500); // Wait a bit for images to load
+                }
+            }
+        }
+    }, [loading, posts, location.search]);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -171,17 +198,13 @@ const Community = () => {
     const handleLike = async (postId) => {
         if (!currentUser) { navigate('/login'); return; }
         try {
-            await axios.put(`${API}/community/${postId}/like`, {}, { withCredentials: true });
-            setLikedPosts(prev => {
-                const next = new Set(prev);
-                next.has(postId) ? next.delete(postId) : next.add(postId);
-                return next;
-            });
-            setPosts(prev => prev.map(p => {
-                if (p._id !== postId) return p;
-                const liked = likedPosts.has(postId);
-                return { ...p, likes: liked ? p.likes.slice(0, -1) : [...p.likes, currentUser.id] };
-            }));
+            const res = await axios.put(`${API}/community/${postId}/like`, {}, { withCredentials: true });
+            if (res.data.success) {
+                setPosts(prev => prev.map(p => {
+                    if (p._id !== postId) return p;
+                    return { ...p, likes: res.data.data };
+                }));
+            }
         } catch (err) {
             console.error('like error', err);
         }
@@ -327,7 +350,14 @@ const Community = () => {
                                     <div className="max-h-80 overflow-y-auto">
                                         {notifications.length > 0 ? (
                                             notifications.map(notif => (
-                                                <div key={notif._id} onClick={() => { navigate(`/profile/${notif.sender._id}`); setShowNotifications(false); }} className={`p-3 border-b border-[#2a2a3e]/50 hover:bg-[#1a1a2e] transition cursor-pointer flex gap-3 ${!notif.isRead ? 'bg-[#1c1c2b]/60' : ''}`}>
+                                                <div key={notif._id} onClick={() => { 
+                                                    if (notif.type === 'NEW_LIKE' || notif.type === 'NEW_COMMENT') {
+                                                        navigate(`/community?postId=${notif.linkId}`);
+                                                    } else {
+                                                        navigate(`/profile/${notif.sender._id}`);
+                                                    }
+                                                    setShowNotifications(false); 
+                                                }} className={`p-3 border-b border-[#2a2a3e]/50 hover:bg-[#1a1a2e] transition cursor-pointer flex gap-3 ${!notif.isRead ? 'bg-[#1c1c2b]/60' : ''}`}>
                                                     <Avatar name={notif.sender?.username} src={notif.sender?.imageProfile} size={10} />
                                                     <div className="flex-1">
                                                         <p className="text-sm text-gray-200 leading-tight"><span className="font-bold text-white">{notif.sender?.username}</span> {notif.message || 'ได้เริ่มติดตามคุณ'}</p>
@@ -386,7 +416,7 @@ const Community = () => {
                     </div>
 
                     <div className="relative bg-[#12121e] rounded-xl border border-[#2a2a3e] min-h-[300px]">
-                        {loading ? (<div className="flex justify-center items-center py-24"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#8b2cf5]" /></div>) : posts.length === 0 ? (<div className="flex flex-col items-center justify-center py-24 text-center"><MessageCircle className="w-14 h-14 mb-4 text-[#2a2a3e]" /><p className="text-gray-300 font-medium">ยังไม่มีโพสต์ในตอนนี้</p></div>) : (<div className="flex flex-col gap-4 p-4">{posts.map(post => (<PostCard key={post._id} post={post} currentUser={currentUser} liked={likedPosts.has(post._id)} onLike={() => handleLike(post._id)} onComment={handleComment} onDeleteComment={handleDeleteComment} onDeletePost={handleDeletePost} />))}</div>)}
+                        {loading ? (<div className="flex justify-center items-center py-24"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#8b2cf5]" /></div>) : posts.length === 0 ? (<div className="flex flex-col items-center justify-center py-24 text-center"><MessageCircle className="w-14 h-14 mb-4 text-[#2a2a3e]" /><p className="text-gray-300 font-medium">ยังไม่มีโพสต์ในตอนนี้</p></div>) : (<div className="flex flex-col gap-4 p-4">{posts.map(post => (<PostCard key={post._id} post={post} currentUser={currentUser} liked={post.likes?.includes(currentUser?.id || currentUser?._id)} onLike={() => handleLike(post._id)} onComment={handleComment} onDeleteComment={handleDeleteComment} onDeletePost={handleDeletePost} />))}</div>)}
                     </div>
                 </div>
 
@@ -569,7 +599,7 @@ function PostCard({ post, currentUser, liked, onLike, onComment, onDeleteComment
     const dateFormatted = `${postDate.getDate()}/${postDate.getMonth() + 1}/${postDate.getFullYear()}`;
 
     return (
-        <div className={`bg-[#12121e] rounded-xl border border-[#2a2a3e] hover:border-[#8b2cf5]/40 transition-all group relative ${(showMenu || showCommentMenu !== null) ? 'z-[60]' : 'z-10'}`}>
+        <div id={`post-${post._id}`} className={`bg-[#12121e] rounded-xl border border-[#2a2a3e] hover:border-[#8b2cf5]/40 transition-all group relative ${(showMenu || showCommentMenu !== null) ? 'z-[60]' : 'z-10'}`}>
             <div className="flex items-start justify-between gap-3 p-4 relative z-20">
                 <div className="flex items-start gap-3 cursor-pointer" onClick={(e) => {
                     e.stopPropagation(); // กันไม่ให้คลิกนี้ทะลุไปลั่น document.addEventListener

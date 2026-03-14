@@ -146,7 +146,14 @@ const Navbar = ({ currentUser, showDropdown, setShowDropdown }) => {
                     notifications.map(notif => (
                       <div
                         key={notif._id}
-                        onClick={() => { navigate(`/profile/${notif.sender._id}`); setShowNotifications(false); }}
+                        onClick={() => {
+                          if (notif.type === 'NEW_LIKE' || notif.type === 'NEW_COMMENT') {
+                            navigate(`/community?postId=${notif.linkId}`);
+                          } else {
+                            navigate(`/profile/${notif.sender._id}`);
+                          }
+                          setShowNotifications(false);
+                        }}
                         className={`p-3 border-b border-[#2a2a3e]/50 hover:bg-[#1a1a2e] transition cursor-pointer flex gap-3 ${!notif.isRead ? 'bg-[#1c1c2b]/60' : ''}`}
                       >
                         <Avatar name={notif.sender?.username} src={notif.sender?.imageProfile} size={10} />
