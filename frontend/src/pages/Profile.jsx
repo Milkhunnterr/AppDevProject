@@ -3,6 +3,7 @@ import { ArrowLeft, User, Star, Package, ShieldCheck, MapPin, Settings, Edit3, C
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { axiosInstance } from '../utils/axios';
 import { PostCard, POST_TYPE_LABELS } from './Community';
+import Navbar from '../components/Navbar';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ const Profile = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [userPosts, setUserPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
-
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // ดึงข้อมูลตัวเองจาก LocalStorage ไว้เทียบว่าใช่โปรไฟล์เราไหม
   let currentUser = null;
@@ -142,7 +143,13 @@ const Profile = () => {
     <div className="min-h-screen bg-[#05050f] text-white font-sans pb-10">
 
       {/* 1. Navbar */}
-      <nav className="bg-[#0a0a16] border-b border-[#2a2a3e] px-4 py-3 sticky top-0 z-50">
+      <Navbar 
+        currentUser={currentUser} 
+        showDropdown={showDropdown} 
+        setShowDropdown={setShowDropdown} 
+      />
+
+      <nav className="bg-[#0a0a16] border-b border-[#2a2a3e] px-4 py-3 sticky top-[73px] z-40">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-400 hover:text-white transition group">
             <div className="p-2 bg-[#151522] rounded-lg border border-[#2a2a3e] group-hover:border-[#8b2cf5] transition-all">

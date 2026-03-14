@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { CreditCard, QrCode, ArrowLeft, Loader2, CheckCircle, ChevronRight, Copy, Lock, Smartphone, Repeat, MapPin, ShieldCheck, Receipt, ClipboardList, Plus, X, Save, MapPinned } from 'lucide-react';
+import { CreditCard, QrCode, ArrowLeft, Loader2, CheckCircle, ChevronRight, Copy, Lock, Smartphone, Repeat, MapPin, ShieldCheck, Receipt, ClipboardList, Plus, X, Save, MapPinned, Ticket } from 'lucide-react';
 
 
 
@@ -34,6 +34,15 @@ const PaymentPage = () => {
         cvv: ''
     });
 
+    // Coupon state
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+    const [couponError, setCouponError] = useState('');
+    const [finalAmount, setFinalAmount] = useState(totalAmount);
+    const [availableCoupons, setAvailableCoupons] = useState([]);
+    const [showCouponModal, setShowCouponModal] = useState(false);
+
 
     const initialAddressForm = {
         label: '',
@@ -50,6 +59,7 @@ const PaymentPage = () => {
 
     useEffect(() => {
         fetchAddresses();
+        fetchAvailableCoupons();
 
         const script = document.createElement('script');
         script.src = 'https://cdn.omise.co/omise.js';
@@ -85,6 +95,49 @@ const PaymentPage = () => {
     const handleCVVChange = (e) => {
         const value = e.target.value.replace(/\D/g, '').substring(0, 3);
         setCardData({ ...cardData, cvv: value });
+    };
+    
+    const fetchAvailableCoupons = async () => {
+        try {
+            const res = await axios.get('http://localhost:5000/api/coupons', { withCredentials: true });
+            if (res.data.success) {
+                setAvailableCoupons(res.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching coupons:', error);
+        }
+    };
+
+    const handleApplyCoupon = async (codeOverride) => {
+        const codeToUse = codeOverride || couponCode;
+        if (!codeToUse) return;
+        setIsValidatingCoupon(true);
+        setCouponError('');
+        try {
+            const res = await axios.post('http://localhost:5000/api/coupons/validate', { code: codeToUse }, { withCredentials: true });
+            if (res.data.success) {
+                const coupon = res.data.data;
+                if (totalAmount < coupon.minAmount) {
+                    setCouponError(`ยอดสั่งซื้อขั้นต่ำสำหรับคูปองนี้คือ ฿${coupon.minAmount}`);
+                    setIsValidatingCoupon(false);
+                    return;
+                }
+                setAppliedCoupon(coupon);
+                setCouponCode(coupon.code);
+                let discount = 0;
+                if (coupon.discountType === 'percentage') {
+                    discount = (totalAmount * coupon.discountValue) / 100;
+                } else {
+                    discount = coupon.discountValue;
+                }
+                setFinalAmount(Math.max(0, totalAmount - discount));
+                setShowCouponModal(false);
+            }
+        } catch (error) {
+            setCouponError(error.response?.data?.message || 'ไม่สามารถใช้คูปองนี้ได้');
+        } finally {
+            setIsValidatingCoupon(false);
+        }
     };
 
     const fetchAddresses = async () => {
@@ -153,7 +206,9 @@ const PaymentPage = () => {
                     province: defaultAddress.province,
                     zipCode: defaultAddress.zipCode
                 },
-                totalAmount: totalAmount,
+                totalAmount: finalAmount,
+                originalAmount: totalAmount,
+                couponCode: appliedCoupon?.code,
                 paymentMethod: method === 'credit' ? 'CREDIT_CARD' : 
                                method === 'promptpay' ? 'PROMPTPAY' : 
                                `MOBILE_BANKING${selectedBank ? ` (${selectedBank.name})` : ''}`
@@ -275,7 +330,7 @@ const PaymentPage = () => {
                 <div className="w-full max-w-md bg-[#0a0a16] border border-[#2a2a3e] rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col">
                     <div className="bg-[#12121e] p-6 text-center border-b border-[#2a2a3e]">
                         <h2 className="text-xl font-bold text-white mb-1">สแกนเพื่อชำระเงิน</h2>
-                        <p className="text-[#8b2cf5] font-bold">ยอดสุทธิ: ฿{totalAmount.toLocaleString()}</p>
+                        <p className="text-[#8b2cf5] font-bold">ยอดสุทธิ: ฿{finalAmount.toLocaleString()}</p>
                     </div>
                     
                     <div className="p-8 flex flex-col items-center">
@@ -772,7 +827,7 @@ const PaymentPage = () => {
                                     {isProcessing ? (
                                         <><Loader2 className="w-6 h-6 animate-spin" /> กำลังประมวลผล...</>
                                     ) : (
-                                        `ยืนยันชำระเงิน ฿${totalAmount.toLocaleString()}`
+                                        `ยืนยันชำระเงิน ฿${finalAmount.toLocaleString()}`
                                     )}
                                 </button>
                                 <div className="text-center text-xs text-gray-500 flex items-center justify-center gap-1 mt-4">
@@ -814,6 +869,61 @@ const PaymentPage = () => {
                                 )}
                             </div>
 
+                             {/* Coupon Section */}
+                             <div className="mb-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-1">คูปองส่วนลด</label>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowCouponModal(true)}
+                                        className="text-[10px] font-bold text-[#8b2cf5] hover:underline flex items-center gap-1"
+                                    >
+                                        <Ticket className="w-3 h-3" /> เลือกคูปอง
+                                    </button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <input 
+                                            type="text" 
+                                            placeholder="ใส่รหัสคูปอง"
+                                            value={couponCode}
+                                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                            className="w-full bg-[#12121e] border border-[#2a2a3e] rounded-xl px-4 py-3 text-sm focus:border-[#8b2cf5] transition animate-in slide-in-from-left-4 duration-300"
+                                            disabled={appliedCoupon}
+                                        />
+                                        {appliedCoupon && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-green-500/10 text-green-500 px-2 py-1 rounded text-[10px] font-bold border border-green-500/20">
+                                                APPLIED
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={handleApplyCoupon}
+                                        disabled={!couponCode || isValidatingCoupon || appliedCoupon}
+                                        className="px-6 bg-[#1c1c2b] border border-[#2a2a3e] rounded-xl text-sm font-bold hover:bg-[#2a2a3e] hover:text-[#8b2cf5] transition disabled:opacity-50"
+                                    >
+                                        {isValidatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'ใช้'}
+                                    </button>
+                                </div>
+                                {couponError && <p className="text-red-400 text-[10px] mt-2 ml-1 animate-in shake duration-300">*{couponError}</p>}
+                                {appliedCoupon && (
+                                    <div className="mt-3 p-3 bg-green-500/5 border border-green-500/10 rounded-xl flex items-center justify-between animate-in zoom-in-95 duration-300">
+                                        <div className="flex items-center gap-2">
+                                            <Ticket className="w-4 h-4 text-green-500" />
+                                            <span className="text-xs text-green-500 font-bold">{appliedCoupon.code}</span>
+                                        </div>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => { setAppliedCoupon(null); setFinalAmount(totalAmount); setCouponCode(''); }}
+                                            className="text-gray-500 hover:text-red-400"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="w-full h-px bg-[#2a2a3e] my-6"></div>
 
                             {/* สรุปยอดเงิน */}
@@ -822,6 +932,12 @@ const PaymentPage = () => {
                                     <span>ยอดรวมสินค้า</span>
                                     <span>฿{totalAmount.toLocaleString()}</span>
                                 </div>
+                                {appliedCoupon && (
+                                    <div className="flex justify-between text-sm text-green-400 animate-in slide-in-from-right-4 duration-300">
+                                        <span>ส่วนลด ({appliedCoupon.code})</span>
+                                        <span>- ฿{(totalAmount - finalAmount).toLocaleString()}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-sm text-gray-400">
                                     <span>ค่าจัดส่ง</span>
                                     <span className="text-green-400">฿0</span>
@@ -834,7 +950,7 @@ const PaymentPage = () => {
                                     <span className="text-xs text-gray-500">รวมภาษีมูลค่าเพิ่มแล้ว</span>
                                 </div>
                                 <span className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#8b2cf5] to-[#4361ee]">
-                                    ฿{totalAmount.toLocaleString()}
+                                    ฿{finalAmount.toLocaleString()}
                                 </span>
                             </div>
                             
@@ -843,6 +959,67 @@ const PaymentPage = () => {
 
                 </div>
             </div>
+            {/* Coupon Selection Modal */}
+            {showCouponModal && (
+                <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-[#0a0a16] border border-[#2a2a3e] rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[70vh]">
+                        <div className="bg-[#12121e] p-6 border-b border-[#2a2a3e] flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-[#8b2cf5]/10 rounded-lg">
+                                    <Ticket className="w-6 h-6 text-[#8b2cf5]" />
+                                </div>
+                                <h3 className="text-xl font-bold">เลือกคูปองส่วนลด</h3>
+                            </div>
+                            <button 
+                                onClick={() => setShowCouponModal(false)}
+                                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
+                            {availableCoupons.length === 0 ? (
+                                <div className="text-center py-12 text-gray-500">
+                                    <Ticket className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                                    <p>ยังไม่มีคูปองที่ใช้ได้ในขณะนี้</p>
+                                </div>
+                            ) : (
+                                availableCoupons.map((coupon) => (
+                                    <div 
+                                        key={coupon._id}
+                                        onClick={() => handleApplyCoupon(coupon.code)}
+                                        className={`p-4 bg-[#12121e] border border-[#2a2a3e] rounded-2xl cursor-pointer hover:border-[#8b2cf5]/50 transition-all group flex items-center justify-between
+                                        ${totalAmount < coupon.minAmount ? 'opacity-50 grayscale pointer-events-none' : ''}`}
+                                    >
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-mono font-bold text-[#8b2cf5] text-lg">{coupon.code}</span>
+                                                {totalAmount < coupon.minAmount && (
+                                                    <span className="text-[9px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded uppercase font-bold border border-red-500/20">฿{coupon.minAmount} MIN</span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-white font-medium">
+                                                ส่วนลด {coupon.discountValue}{coupon.discountType === 'percentage' ? '%' : '฿'}
+                                            </p>
+                                            <p className="text-[10px] text-gray-500 mt-1">
+                                                หมดอายุ: {new Date(coupon.expiryDate).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full border border-gray-700 flex items-center justify-center group-hover:border-[#8b2cf5] group-hover:bg-[#8b2cf5]/10 transition-all">
+                                            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-[#8b2cf5]" />
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        
+                        <div className="p-4 bg-[#0a0a16] border-t border-[#2a2a3e] text-center">
+                            <p className="text-[10px] text-gray-500">เงื่อนไขเป็นไปตามที่บริษัทกำหนด</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

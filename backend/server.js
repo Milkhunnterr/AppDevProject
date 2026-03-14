@@ -19,6 +19,9 @@ import reviewRoute from "./routes/review.route.js";
 import couponRoute from "./routes/coupon.route.js"; 
 import accountSettingRoute from "./routes/accountsetting.route.js";
 import orderRoute from "./routes/order.routes.js";
+import adminRoute from "./routes/admin.route.js";
+import { getSiteSettings } from "./controllers/siteSettings.controller.js";
+import { initializeSettings } from "./models/SiteSettings.model.js";
 
 
 const app = express();
@@ -47,10 +50,13 @@ app.use("/api/reviews", reviewRoute);
 app.use("/api/coupons", couponRoute); 
 app.use("/api/account-settings", accountSettingRoute);
 app.use("/api/orders", orderRoute);
+app.use("/api/admin", adminRoute);
+app.get("/api/settings", getSiteSettings);
 
 
 // 🚀 สตาร์ทเซิร์ฟเวอร์ และต่อ Database
-app.listen(PORT, () => {
-    connectDB(); 
+app.listen(PORT, async () => {
+    await connectDB();
+    await initializeSettings();
     console.log(`Server is running on http://localhost:${PORT}`);
 });

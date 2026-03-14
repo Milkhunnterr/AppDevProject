@@ -17,6 +17,7 @@ import AccountSetting from './pages/AccountSetting';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import OrderHistory from './pages/OrderHistory';
+import AdminDashboard from './pages/AdminDashboard';
 
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/orders" element={<OrderHistory />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Routes>
 
     </BrowserRouter>
