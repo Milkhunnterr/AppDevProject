@@ -19,7 +19,7 @@ const ProductSearch = () => {
 
   // 🟢 1. State สำหรับระบบแบ่งหน้า (Pagination)
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 30; // กำหนดให้แสดงหน้าละ 30 ชิ้น
+  const itemsPerPage = 32; // กำหนดให้แสดงหน้าละ 32 ชิ้น 
 
   const getImageUrl = (path) => {
     if (!path) return null;
@@ -121,7 +121,7 @@ const ProductSearch = () => {
         ) : (
           <>
             {/* 🟢 4. โครงสร้างตาราง (บังคับ md:grid-cols-3 เพื่อให้ได้แถวละ 3 ชิ้นเป๊ะๆ) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               
               {/* วนลูปจาก currentItems (ที่ไม่เกิน 30 ชิ้น) แทน filteredProducts ทั้งหมด */}
               {currentItems.map((item) => (
