@@ -1,11 +1,15 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
-import https from "https";
-import http from "http";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import Product from "./models/Product.model.js";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -13,21 +17,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ฟังก์ชันตรวจสอบว่า URL ยังมีไฟล์อยู่ไหม
-const checkUrl = (url) =>
-  new Promise((resolve) => {
-    const client = url.startsWith("https") ? https : http;
-    client.get(url, (res) => {
-      resolve(res.statusCode === 200);
-      res.resume();
-    }).on("error", () => resolve(false));
-  });
-
 const migrate = async () => {
   try {
     console.log("🔌 Connecting to DB...");
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ Connected to DB.");
+    console.log("✅ Connected to DB.\n");
 
     const products = await Product.find({
       images: { $elemMatch: { $regex: "^http://localhost" } }
@@ -46,16 +40,19 @@ const migrate = async () => {
           continue;
         }
 
-        const exists = await checkUrl(imgUrl);
-        if (!exists) {
-          console.log(`  ⚠️  File missing: ${product.productName} — keeping old URL`);
-          newImages.push(imgUrl);
+        // ดึงชื่อไฟล์จาก URL แล้วหาในโฟลเดอร์ uploads โดยตรง
+        const filename = imgUrl.split("/uploads/").pop();
+        const localPath = path.join(__dirname, "uploads", filename);
+
+        if (!fs.existsSync(localPath)) {
+          console.log(`  ⚠️  File missing on disk: [${product.productName}] ${filename}`);
+          newImages.push(imgUrl); // เก็บ URL เดิม
           skipped++;
           continue;
         }
 
         try {
-          const uploadResult = await cloudinary.uploader.upload(imgUrl, {
+          const uploadResult = await cloudinary.uploader.upload(localPath, {
             folder: "AppDevProducts",
           });
           console.log(`  ✅ Uploaded [${product.productName}] => ${uploadResult.secure_url}`);
