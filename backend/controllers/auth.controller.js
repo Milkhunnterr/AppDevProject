@@ -282,7 +282,7 @@ export const toggleFollow = async (req, res) => {
 
         if (!targetUser) return res.status(404).json({ message: "ไม่พบผู้ใช้งาน" });
 
-        const isFollowing = me.following.includes(targetUserId);
+        const isFollowing = me.following.some(id => id.toString() === targetUserId);
 
         if (isFollowing) {
             me.following = me.following.filter(id => id.toString() !== targetUserId);

@@ -416,7 +416,10 @@ const Community = () => {
                     </div>
 
                     <div className="relative bg-[#12121e] rounded-xl border border-[#2a2a3e] min-h-[300px]">
-                        {loading ? (<div className="flex justify-center items-center py-24"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#8b2cf5]" /></div>) : posts.length === 0 ? (<div className="flex flex-col items-center justify-center py-24 text-center"><MessageCircle className="w-14 h-14 mb-4 text-[#2a2a3e]" /><p className="text-gray-300 font-medium">ยังไม่มีโพสต์ในตอนนี้</p></div>) : (<div className="flex flex-col gap-4 p-4">{posts.map(post => (<PostCard key={post._id} post={post} currentUser={currentUser} liked={post.likes?.includes(currentUser?.id || currentUser?._id)} onLike={() => handleLike(post._id)} onComment={handleComment} onDeleteComment={handleDeleteComment} onDeletePost={handleDeletePost} />))}</div>)}
+                        {loading ? (<div className="flex justify-center items-center py-24"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#8b2cf5]" /></div>) : posts.length === 0 ? (<div className="flex flex-col items-center justify-center py-24 text-center"><MessageCircle className="w-14 h-14 mb-4 text-[#2a2a3e]" /><p className="text-gray-300 font-medium">ยังไม่มีโพสต์ในตอนนี้</p></div>) : (<div className="flex flex-col gap-4 p-4">{posts.map(post => {
+                            const isFollowed = friends.some(f => f._id === post.author?._id);
+                            return <PostCard key={post._id} post={post} currentUser={currentUser} liked={post.likes?.includes(currentUser?.id || currentUser?._id)} isFollowing={isFollowed} onLike={() => handleLike(post._id)} onComment={handleComment} onDeleteComment={handleDeleteComment} onDeletePost={handleDeletePost} />
+                        })}</div>)}
                     </div>
                 </div>
 
@@ -533,7 +536,7 @@ const Community = () => {
 };
 
 // ═══════════════ POST CARD ═══════════════
-function PostCard({ post, currentUser, liked, onLike, onComment, onDeleteComment, onDeletePost }) {
+function PostCard({ post, currentUser, liked, isFollowing, onLike, onComment, onDeleteComment, onDeletePost }) {
     const [expanded, setExpanded] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [showCommentMenu, setShowCommentMenu] = useState(null);
@@ -624,7 +627,7 @@ function PostCard({ post, currentUser, liked, onLike, onComment, onDeleteComment
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/profile/${post.author._id}`); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#2a2a3e] rounded-lg transition-colors"><User className="w-4 h-4" /> ดูโปรไฟล์</button>
                         {!isMe && (
                             <>
-                                <button onClick={handleFollowClick} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#2a2a3e] hover:text-[#8b2cf5] rounded-lg transition-colors"><Plus className="w-4 h-4" /> ติดตาม</button>
+                                <button onClick={handleFollowClick} className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${isFollowing ? 'text-gray-400 hover:bg-red-500/20 hover:text-red-400' : 'text-gray-300 hover:bg-[#2a2a3e] hover:text-[#8b2cf5]'}`}>{isFollowing ? <><Check className="w-4 h-4" /> เลิกติดตาม</> : <><Plus className="w-4 h-4" /> ติดตาม</>}</button>
                                 <div className="h-px bg-[#2a2a3e] my-1"></div>
                                 <button onClick={(e) => handleChatClick(e, 'GENERAL')} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#2a2a3e] rounded-lg transition-colors"><MessageCircle className="w-4 h-4" /> แชททั่วไป</button>
                                 {isTradeRelated && <button onClick={(e) => handleChatClick(e, 'TRADE')} className="w-full flex items-center gap-2 px-3 py-2 text-sm font-bold text-[#8b2cf5] hover:bg-[#8b2cf5]/15 rounded-lg transition-colors"><PackageOpen className="w-4 h-4" /> แชทเทรด/ซื้อ</button>}
@@ -686,6 +689,7 @@ function PostCard({ post, currentUser, liked, onLike, onComment, onDeleteComment
                                 const isPostOwner = isMe;
                                 const canDelete = isCommentOwner || isPostOwner;
                                 const isCommentMenuOpen = showCommentMenu === comment._id;
+                                const isCommentAuthorFollowing = isFollowing; // Assuming isFollowing passed to PostCard applies to the post author, not comment author. Need to adjust if comment author's follow status is needed.
 
                                 return (
                                     <div key={comment._id} className={`flex items-start gap-2.5 p-2 rounded-lg transition group relative ${isCommentMenuOpen ? 'z-[100] bg-[#1a1a2e]' : 'z-10 hover:bg-[#1a1a2e]'}`}>
