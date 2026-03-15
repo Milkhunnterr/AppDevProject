@@ -41,7 +41,7 @@ const Profile = () => {
         const res = await axiosInstance.get(`http://localhost:5000/api/auth/profile/${targetId}`);
         if (res.data.success) {
           setProfileData(res.data.data);
-          setIsFollowing(res.data.data.followers?.includes(myId));
+          setIsFollowing(res.data.data.followers?.some(f => String(f._id || f) === String(myId)));
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -90,16 +90,16 @@ const Profile = () => {
   const handleFollowToggle = async () => {
     if (!currentUser) return navigate('/login');
     try {
-      const res = await axios.put(`http://localhost:5000/api/auth/follow/${profileData._id}`, {}, { withCredentials: true });
+      const res = await axiosInstance.put(`/auth/follow/${profileData._id}`);
       if (res.data.success) {
         setIsFollowing(res.data.isFollowing);
         // อัปเดตตัวเลขผู้ติดตามแบบ Real-time บนหน้าจอ
-        setProfileData(prev => ({
-          ...prev,
-          followers: res.data.isFollowing
-            ? [...(prev.followers || []), myId]
-            : (prev.followers || []).filter(followerId => String(followerId) !== String(myId))
-        }));
+        setProfileData(prev => {
+          const newFollowers = res.data.isFollowing
+            ? [...(prev.followers || []), { _id: myId, username: currentUser.username }] // Fake populate
+            : (prev.followers || []).filter(follower => String(follower._id || follower) !== String(myId));
+          return { ...prev, followers: newFollowers };
+        });
       }
     } catch (error) {
       console.error("Follow error:", error);
@@ -143,10 +143,10 @@ const Profile = () => {
     <div className="min-h-screen bg-[#05050f] text-white font-sans pb-10">
 
       {/* 1. Navbar */}
-      <Navbar 
-        currentUser={currentUser} 
-        showDropdown={showDropdown} 
-        setShowDropdown={setShowDropdown} 
+      <Navbar
+        currentUser={currentUser}
+        showDropdown={showDropdown}
+        setShowDropdown={setShowDropdown}
       />
 
       <nav className="bg-[#0a0a16] border-b border-[#2a2a3e] px-4 py-3 sticky top-[73px] z-40">
