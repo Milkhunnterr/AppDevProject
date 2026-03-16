@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, User, Loader2, ArrowLeft, Repeat } from 'lucide-react'; // 🟢 เพิ่ม ArrowLeft กับ Repeat
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import logo from '../assets/logo0.png';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const Signup = () => {
     try {
       // 🚀 ยิง API สมัครสมาชิก
       const response = await axios.post('http://localhost:5000/api/auth/register', formData);
-      
+
       if (response.data.success) {
         alert('🎉 สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
         navigate('/login');
@@ -45,17 +46,17 @@ const Signup = () => {
           <ArrowLeft className="text-gray-400 w-5 h-5 group-hover:text-white transition-colors" />
         </div>
         <div className="hidden sm:flex items-center gap-2 ml-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(139,44,245,0.4)]">
-            <Repeat className="text-white w-5 h-5" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(139,44,245,0.4)] overflow-hidden">
+            <img src={logo} alt="Shoplify Logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b2cf5] to-[#4361ee]">
-            TradeApp
+            Shoplify
           </span>
         </div>
       </Link>
 
       <div className="w-full max-w-md bg-[#0a0a16] border border-[#2a2a3e] rounded-2xl p-8 shadow-2xl relative z-10">
-        
+
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#8b2cf5] mb-3">Sign Up</h1>
           <p className="text-gray-400 text-sm">สร้างบัญชีเพื่อเริ่มต้นใช้งาน</p>
@@ -73,7 +74,7 @@ const Signup = () => {
             <label className="text-[11px] font-bold text-gray-400 tracking-wider">USERNAME</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input 
+              <input
                 type="text" name="username" required minLength="3" maxLength="20"
                 value={formData.username} onChange={handleChange}
                 placeholder="ชื่อผู้ใช้ของคุณ"
@@ -87,7 +88,7 @@ const Signup = () => {
             <label className="text-[11px] font-bold text-gray-400 tracking-wider">EMAIL ADDRESS</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input 
+              <input
                 type="email" name="email" required
                 value={formData.email} onChange={handleChange}
                 placeholder="you@example.com"
@@ -101,7 +102,7 @@ const Signup = () => {
             <label className="text-[11px] font-bold text-gray-400 tracking-wider">PASSWORD</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input 
+              <input
                 type="password" name="password" required minLength="6"
                 value={formData.password} onChange={handleChange}
                 placeholder="••••••••"
@@ -110,8 +111,8 @@ const Signup = () => {
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="w-full bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] text-white font-bold py-3.5 rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-2 mt-6 disabled:opacity-70"
           >

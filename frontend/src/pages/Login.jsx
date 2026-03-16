@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lock, User, ArrowRight, Loader2, Repeat, ArrowLeft } from 'lucide-react'; // 🟢 นำเข้า Repeat เพิ่ม
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import logo from '../assets/logo0.png';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,9 +21,9 @@ const Login = () => {
 
     try {
       const response = await axios.post('http://localhost:5000/api/auth/login', formData, {
-        withCredentials: true 
+        withCredentials: true
       });
-      
+
       if (response.data.success) {
         localStorage.setItem('user', JSON.stringify(response.data.user));
         navigate('/');
@@ -45,17 +46,17 @@ const Login = () => {
           <ArrowLeft className="text-gray-400 w-5 h-5 group-hover:text-white transition-colors" />
         </div>
         <div className="hidden sm:flex items-center gap-2 ml-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(67,97,238,0.4)]">
-            <Repeat className="text-white w-5 h-5" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(139,44,245,0.4)] overflow-hidden">
+            <img src={logo} alt="Shoplify Logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b2cf5] to-[#4361ee]">
-            TradeApp
+            Shoplify
           </span>
         </div>
       </Link>
 
       <div className="w-full max-w-md bg-[#0a0a16] border border-[#2a2a3e] rounded-2xl p-8 shadow-2xl relative z-10">
-        
+
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] mb-3">
             Welcome Back
@@ -75,7 +76,7 @@ const Login = () => {
             <label className="text-[11px] font-bold text-gray-400 tracking-wider">EMAIL OR USERNAME</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input 
+              <input
                 type="text" name="identifier" required
                 value={formData.identifier} onChange={handleChange}
                 placeholder="ใส่อีเมล หรือ ชื่อผู้ใช้"
@@ -87,12 +88,12 @@ const Login = () => {
           {/* PASSWORD */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center mb-1">
-                <label className="text-[11px] font-bold text-gray-400 tracking-wider">PASSWORD</label>
-                <Link to="/forgot-password" className="text-[11px] text-[#4361ee] hover:underline">ลืมรหัสผ่าน?</Link>
+              <label className="text-[11px] font-bold text-gray-400 tracking-wider">PASSWORD</label>
+              <Link to="/forgot-password" className="text-[11px] text-[#4361ee] hover:underline">ลืมรหัสผ่าน?</Link>
             </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input 
+              <input
                 type="password" name="password" required
                 value={formData.password} onChange={handleChange}
                 placeholder="••••••••"
@@ -101,8 +102,8 @@ const Login = () => {
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="w-full bg-gradient-to-r from-[#4361ee] to-[#8b2cf5] text-white font-bold py-3.5 rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70"
           >

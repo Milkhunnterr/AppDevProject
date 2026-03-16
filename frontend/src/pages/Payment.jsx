@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CreditCard, QrCode, ArrowLeft, Loader2, CheckCircle, ChevronRight, Copy, Lock, Smartphone, Repeat, MapPin, ShieldCheck, Receipt, ClipboardList, Plus, X, Save, MapPinned, Ticket } from 'lucide-react';
-
+import logo from '../assets/logo0.png';
 
 
 const PaymentPage = () => {
@@ -18,7 +18,7 @@ const PaymentPage = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const [showPromptPayQR, setShowPromptPayQR] = useState(false);
     const [processingMessage, setProcessingMessage] = useState('');
-    
+
     // Address state
     const [defaultAddress, setDefaultAddress] = useState(null);
     const [addresses, setAddresses] = useState([]);
@@ -96,7 +96,7 @@ const PaymentPage = () => {
         const value = e.target.value.replace(/\D/g, '').substring(0, 3);
         setCardData({ ...cardData, cvv: value });
     };
-    
+
     const fetchAvailableCoupons = async () => {
         try {
             const res = await axios.get('http://localhost:5000/api/coupons', { withCredentials: true });
@@ -192,7 +192,7 @@ const PaymentPage = () => {
 
             const discount = totalAmount - finalAmount;
             const firstItem = items[0];
-            
+
             const orderData = {
                 items: items.map(item => ({
                     productId: item._id,
@@ -217,9 +217,9 @@ const PaymentPage = () => {
                 discountCode: appliedCoupon?.code || "",
                 shopName: firstItem?.ownerId?.username || firstItem?.shopId?.shopName || "Shopify Store",
                 shopId: firstItem?.shopId?._id || firstItem?.shopId,
-                paymentMethod: method === 'credit' ? 'CREDIT_CARD' : 
-                               method === 'promptpay' ? 'PROMPTPAY' : 
-                               `MOBILE_BANKING${selectedBank ? ` (${selectedBank.name})` : ''}`
+                paymentMethod: method === 'credit' ? 'CREDIT_CARD' :
+                    method === 'promptpay' ? 'PROMPTPAY' :
+                        `MOBILE_BANKING${selectedBank ? ` (${selectedBank.name})` : ''}`
             };
 
 
@@ -250,7 +250,7 @@ const PaymentPage = () => {
 
         if (method === 'credit') {
             setIsProcessing(true); // ใช้ isProcessing สำหรับสถานะกำลังชำระเงิน
-            
+
             // จำลองการตรวจสอบบัตร
             setTimeout(async () => {
                 const success = await saveOrder({ cardData });
@@ -272,15 +272,15 @@ const PaymentPage = () => {
         } else { // This is for 'mobile'
             setIsProcessing(true);
             setProcessingMessage('กำลังติดต่อกับระบบธนาคาร...');
-            
+
             // Step 1: Connecting
             setTimeout(() => {
                 setProcessingMessage('กำลังนำคุณไปยังหน้าชำระเงิน...');
-                
+
                 // Step 2: Redirecting feel
                 setTimeout(async () => {
                     setProcessingMessage('กำลังตรวจสอบสถานะการชำระเงิน...');
-                    
+
                     // Step 3: Verifying success
                     setTimeout(async () => {
                         const success = await saveOrder();
@@ -308,7 +308,7 @@ const PaymentPage = () => {
                     </div>
                     <h1 className="text-3xl font-bold text-white mb-3">ชำระเงินสำเร็จ!</h1>
                     <p className="text-gray-400 text-sm mb-8">ขอบคุณสำหรับการสั่งซื้อ ออเดอร์ของคุณกำลังถูกจัดเตรียม</p>
-                    
+
                     <div className="flex flex-col gap-3">
                         <button
                             onClick={() => navigate('/orders')}
@@ -340,17 +340,17 @@ const PaymentPage = () => {
                         <h2 className="text-xl font-bold text-white mb-1">สแกนเพื่อชำระเงิน</h2>
                         <p className="text-[#8b2cf5] font-bold">ยอดสุทธิ: ฿{finalAmount.toLocaleString()}</p>
                     </div>
-                    
+
                     <div className="p-8 flex flex-col items-center">
                         <div className="bg-white p-5 rounded-2xl inline-block mb-6 shadow-[0_0_30px_rgba(255,255,255,0.1)] relative group">
                             <div className="absolute inset-0 border-2 border-[#8b2cf5] rounded-2xl opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                            <img 
-                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/330px-QR_code_for_mobile_English_Wikipedia.svg.png" 
-                                alt="PromptPay QR Code" 
+                            <img
+                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/330px-QR_code_for_mobile_English_Wikipedia.svg.png"
+                                alt="PromptPay QR Code"
                                 className="w-48 h-48 relative z-10"
                             />
                         </div>
-                        
+
                         <div className="bg-[#1c1c2b] rounded-xl p-4 w-full mb-8 border border-[#2a2a3e]">
                             <div className="flex justify-between text-xs text-gray-400 mb-2">
                                 <span>รายการ</span>
@@ -417,8 +417,8 @@ const PaymentPage = () => {
                         {processingMessage || (method === 'credit' ? 'กำลังตรวจสอบข้อมูลบัตร...' : 'กำลังดำเนินการ...')}
                     </h3>
                     <p className="text-gray-400 max-w-xs leading-relaxed">
-                        {method === 'credit' 
-                            ? 'โปรดอย่าปิดหน้าต่างนี้ ระบบกำลังรักษาความปลอดภัยข้อมูลการชำระเงินของคุณสู่ธนาคารต้นทาง' 
+                        {method === 'credit'
+                            ? 'โปรดอย่าปิดหน้าต่างนี้ ระบบกำลังรักษาความปลอดภัยข้อมูลการชำระเงินของคุณสู่ธนาคารต้นทาง'
                             : 'โปรดอย่าปิดหน้าต่างนี้ ระบบกำลังนำคุณเข้าสู่กระบวนการที่ปลอดภัย'}
                     </p>
                     <div className="mt-8 flex gap-2">
@@ -440,7 +440,7 @@ const PaymentPage = () => {
                                 </div>
                                 <h3 className="text-xl font-bold">{isAddingNewAddress ? 'เพิ่มที่อยู่ใหม่' : 'เลือกที่อยู่จัดส่ง'}</h3>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => { setShowAddressModal(false); setIsAddingNewAddress(false); }}
                                 className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition"
                             >
@@ -538,8 +538,8 @@ const PaymentPage = () => {
                                         <button type="submit" className="flex-1 py-4 bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] text-white font-bold rounded-2xl shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2">
                                             <Save className="w-5 h-5" /> ใช้ที่อยู่ตามนี้
                                         </button>
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             onClick={() => setIsAddingNewAddress(false)}
                                             className="flex-1 py-4 bg-[#12121e] border border-[#2a2a3e] text-gray-400 font-bold rounded-2xl hover:text-white transition"
                                         >
@@ -550,8 +550,8 @@ const PaymentPage = () => {
                             ) : (
                                 <div className="space-y-4">
                                     {addresses.map((addr) => (
-                                        <div 
-                                            key={addr._id} 
+                                        <div
+                                            key={addr._id}
                                             onClick={() => handleSelectAddress(addr)}
                                             className={`p-5 bg-[#12121e] border rounded-2xl cursor-pointer transition-all hover:-translate-y-1 flex justify-between items-center group ${defaultAddress?._id === addr._id ? 'border-[#8b2cf5] shadow-[0_0_20px_rgba(139,44,245,0.1)]' : 'border-[#2a2a3e] hover:border-gray-600'}`}
                                         >
@@ -579,11 +579,11 @@ const PaymentPage = () => {
                                         </div>
                                     ))}
 
-                                    <button 
+                                    <button
                                         onClick={() => setIsAddingNewAddress(true)}
                                         className="w-full p-4 border-2 border-dashed border-[#2a2a3e] rounded-2xl flex items-center justify-center gap-3 text-gray-500 hover:border-[#8b2cf5] hover:text-[#8b2cf5] transition group mt-2"
                                     >
-                                        <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" /> 
+                                        <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
                                         <span className="font-bold">เพิ่มที่อยู่ใหม่</span>
                                     </button>
                                 </div>
@@ -604,18 +604,18 @@ const PaymentPage = () => {
                     <ArrowLeft className="text-gray-400 w-5 h-5 group-hover:text-white transition-colors" />
                 </div>
                 <div className="hidden sm:flex items-center gap-2 ml-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(67,97,238,0.4)]">
-                        <Repeat className="text-white w-5 h-5" />
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(139,44,245,0.4)] overflow-hidden">
+                        <img src={logo} alt="Shoplify Logo" className="w-full h-full object-cover" />
                     </div>
                     <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b2cf5] to-[#4361ee]">
-                        TradeApp
+                        Shoplify
                     </span>
                 </div>
             </Link>
 
             {/* Main Container */}
             <div className="w-full max-w-6xl relative z-10 mt-20 md:mt-12">
-                
+
                 <div className="mb-8 text-center md:text-left">
                     <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b2cf5] to-[#4361ee]">
                         ยืนยันการสั่งซื้อ
@@ -625,10 +625,10 @@ const PaymentPage = () => {
 
                 {/* 🟢 Grid Layout 2 Columns สำหรับหน้าจอใหญ่ */}
                 <div className="flex flex-col lg:flex-row gap-8 items-start">
-                    
+
                     {/* ฝั่งซ้าย: ที่อยู่ + ฟอร์มชำระเงิน (กว้าง 60%) */}
                     <div className="w-full lg:flex-1 space-y-6">
-                        
+
                         {/* 1. ที่อยู่สำหรับจัดส่ง */}
                         <div className="bg-[#0a0a16] border border-[#2a2a3e] rounded-3xl p-6 md:p-8 shadow-xl">
                             <div className="flex items-center justify-between mb-6">
@@ -638,7 +638,7 @@ const PaymentPage = () => {
                                     </div>
                                     <h2 className="text-lg font-bold text-white">ที่อยู่สำหรับจัดส่ง</h2>
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => setShowAddressModal(true)}
                                     className="text-xs font-bold text-[#4361ee] hover:bg-[#4361ee]/20 flex items-center gap-1 bg-[#4361ee]/10 px-4 py-2 rounded-full border border-[#4361ee]/20 transition-all"
                                 >
@@ -719,13 +719,13 @@ const PaymentPage = () => {
                                                 <Lock className="w-4 h-4 text-[#4361ee]" />
                                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Secure Credit/Debit Payment</span>
                                             </div>
-                                            
+
                                             <div className="space-y-4">
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">หมายเลขบัตร (Card Number)</label>
                                                     <div className="relative">
-                                                        <input 
-                                                            type="text" 
+                                                        <input
+                                                            type="text"
                                                             placeholder="0000 0000 0000 0000"
                                                             value={cardData.number}
                                                             onChange={handleCardNumberChange}
@@ -741,11 +741,11 @@ const PaymentPage = () => {
 
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">ชื่อผู้ถือบัตร (Card Holder Name)</label>
-                                                    <input 
-                                                        type="text" 
+                                                    <input
+                                                        type="text"
                                                         placeholder="YOUR NAME"
                                                         value={cardData.holder}
-                                                        onChange={(e) => setCardData({...cardData, holder: e.target.value.toUpperCase()})}
+                                                        onChange={(e) => setCardData({ ...cardData, holder: e.target.value.toUpperCase() })}
                                                         className="w-full bg-[#0a0a16] border border-[#2a2a3e] rounded-xl py-3 px-4 text-white text-sm focus:border-[#4361ee] focus:ring-1 focus:ring-[#4361ee] transition-all uppercase"
                                                         required
                                                     />
@@ -754,8 +754,8 @@ const PaymentPage = () => {
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">วันหมดอายุ (Expiry)</label>
-                                                        <input 
-                                                            type="text" 
+                                                        <input
+                                                            type="text"
                                                             placeholder="MM/YY"
                                                             value={cardData.expiry}
                                                             onChange={handleExpiryChange}
@@ -765,8 +765,8 @@ const PaymentPage = () => {
                                                     </div>
                                                     <div>
                                                         <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">CVV</label>
-                                                        <input 
-                                                            type="password" 
+                                                        <input
+                                                            type="password"
                                                             placeholder="***"
                                                             value={cardData.cvv}
                                                             onChange={handleCVVChange}
@@ -801,10 +801,10 @@ const PaymentPage = () => {
                                                 <label key={bank.id} className={`flex items-center justify-between p-4 border rounded-xl hover:border-[#8b2cf5]/50 transition-all bg-[#12121e] cursor-pointer group ${selectedBank?.id === bank.id ? 'border-[#8b2cf5] bg-[#8b2cf5]/5' : 'border-[#2a2a3e]'}`}>
                                                     <div className="flex items-center gap-4">
                                                         <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
-                                                            <input 
-                                                                type="radio" 
-                                                                name="bank" 
-                                                                className="peer sr-only" 
+                                                            <input
+                                                                type="radio"
+                                                                name="bank"
+                                                                className="peer sr-only"
                                                                 required
                                                                 checked={selectedBank?.id === bank.id}
                                                                 onChange={() => setSelectedBank(bank)}
@@ -848,7 +848,7 @@ const PaymentPage = () => {
                     {/* ฝั่งขวา: สรุปรายการสินค้า (กว้าง 40% และ Sticky เลื่อนตาม) */}
                     <div className="w-full lg:w-[400px] xl:w-[450px] space-y-6 lg:sticky lg:top-8">
                         <div className="bg-[#0a0a16] border border-[#2a2a3e] rounded-3xl p-6 md:p-8 shadow-xl">
-                            
+
                             <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                                 สรุปคำสั่งซื้อ
                             </h3>
@@ -877,11 +877,11 @@ const PaymentPage = () => {
                                 )}
                             </div>
 
-                             {/* Coupon Section */}
-                             <div className="mb-6">
+                            {/* Coupon Section */}
+                            <div className="mb-6">
                                 <div className="flex items-center justify-between mb-2">
                                     <label className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-1">คูปองส่วนลด</label>
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => setShowCouponModal(true)}
                                         className="text-[10px] font-bold text-[#8b2cf5] hover:underline flex items-center gap-1"
@@ -891,8 +891,8 @@ const PaymentPage = () => {
                                 </div>
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
-                                        <input 
-                                            type="text" 
+                                        <input
+                                            type="text"
                                             placeholder="ใส่รหัสคูปอง"
                                             value={couponCode}
                                             onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
@@ -905,7 +905,7 @@ const PaymentPage = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={handleApplyCoupon}
                                         disabled={!couponCode || isValidatingCoupon || appliedCoupon}
@@ -921,8 +921,8 @@ const PaymentPage = () => {
                                             <Ticket className="w-4 h-4 text-green-500" />
                                             <span className="text-xs text-green-500 font-bold">{appliedCoupon.code}</span>
                                         </div>
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             onClick={() => { setAppliedCoupon(null); setFinalAmount(totalAmount); setCouponCode(''); }}
                                             className="text-gray-500 hover:text-red-400"
                                         >
@@ -961,7 +961,7 @@ const PaymentPage = () => {
                                     ฿{finalAmount.toLocaleString()}
                                 </span>
                             </div>
-                            
+
                         </div>
                     </div>
 
@@ -978,7 +978,7 @@ const PaymentPage = () => {
                                 </div>
                                 <h3 className="text-xl font-bold">เลือกคูปองส่วนลด</h3>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setShowCouponModal(false)}
                                 className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition"
                             >
@@ -994,7 +994,7 @@ const PaymentPage = () => {
                                 </div>
                             ) : (
                                 availableCoupons.map((coupon) => (
-                                    <div 
+                                    <div
                                         key={coupon._id}
                                         onClick={() => handleApplyCoupon(coupon.code)}
                                         className={`p-4 bg-[#12121e] border border-[#2a2a3e] rounded-2xl cursor-pointer hover:border-[#8b2cf5]/50 transition-all group flex items-center justify-between
@@ -1021,7 +1021,7 @@ const PaymentPage = () => {
                                 ))
                             )}
                         </div>
-                        
+
                         <div className="p-4 bg-[#0a0a16] border-t border-[#2a2a3e] text-center">
                             <p className="text-[10px] text-gray-500">เงื่อนไขเป็นไปตามที่บริษัทกำหนด</p>
                         </div>
