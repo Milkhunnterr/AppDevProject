@@ -43,7 +43,12 @@ const Home = () => {
       try {
         const response = await axios.get('http://localhost:5000/api/products');
         if (response.data.success) {
-          setProducts(response.data.data);
+          //เรียงลำดับจากวันที่สร้างล่าสุด (ใหม่สุดอยู่บนสุด)
+          const sortedProducts = response.data.data.sort((a, b) => {
+            return new Date(b.createdAt) - new Date(a.createdAt);
+          });
+          //ตัดเอามาแค่ 1 ชิ้นแรก (1 แถว แถวละ 4 ชิ้น)
+          setProducts(sortedProducts.slice(0, 4));
         }
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -122,8 +127,16 @@ const Home = () => {
       </div>
 
       {/* 🟢 Product Grid */}
+
       <div className="max-w-7xl mx-auto px-4 mt-10">
-        <h2 className="text-xl font-bold mb-6 border-l-4 border-[#8b2cf5] pl-3">ไอเทมมาใหม่</h2>
+        <div className="flex justify-between items-end mb-6">
+          <h2 className="text-xl font-bold border-l-4 border-[#8b2cf5] pl-3">สินค้ามาใหม่</h2>
+
+          {/* เพิ่มปุ่มกดไปหน้าค้นหา เพื่อดูสินค้าทั้งหมด */}
+          <Link to="/search" className="text-sm font-medium text-[#8b2cf5] hover:text-white transition-colors">
+            ดูทั้งหมด &gt;
+          </Link>
+        </div>
 
         {loading ? (
           <div className="flex justify-center items-center py-20">
