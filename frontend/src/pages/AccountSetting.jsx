@@ -344,7 +344,7 @@ const AccountSetting = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:5000/api/auth/logout', {}, { withCredentials: true });
+      await axiosInstance.post('/auth/logout', {});
       localStorage.removeItem('user');
       navigate('/login');
     } catch (error) {

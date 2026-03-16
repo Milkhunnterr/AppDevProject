@@ -2,8 +2,9 @@ import axios from 'axios';
 
 // 🌐 ตั้งค่า URL ของ Backend
 // ถ้าอยู่บน Render จะดึงค่าจาก VITE_API_URL (ที่เราตั้งใน Environment) 
-// ถ้าไม่เจอจะวิ่งไปที่ localhost:5000 (ในเครื่องเรา)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// แต่ถ้ากำลังรันแบบ Local (npm run dev) ให้บังคับวิ่งไปที่ localhost:5000 เสมอ
+const isDev = import.meta.env.MODE === 'development';
+const API_BASE_URL = isDev ? 'http://localhost:5000/api' : (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
 // สร้างตัวแปร axiosInstance
 export const axiosInstance = axios.create({
