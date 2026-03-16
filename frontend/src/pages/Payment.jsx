@@ -190,6 +190,9 @@ const PaymentPage = () => {
                 return false;
             }
 
+            const discount = totalAmount - finalAmount;
+            const firstItem = items[0];
+            
             const orderData = {
                 items: items.map(item => ({
                     productId: item._id,
@@ -210,7 +213,10 @@ const PaymentPage = () => {
                 },
                 totalAmount: finalAmount,
                 originalAmount: totalAmount,
-                couponCode: appliedCoupon?.code,
+                discountAmount: discount,
+                discountCode: appliedCoupon?.code || "",
+                shopName: firstItem?.ownerId?.username || firstItem?.shopId?.shopName || "Shopify Store",
+                shopId: firstItem?.shopId?._id || firstItem?.shopId,
                 paymentMethod: method === 'credit' ? 'CREDIT_CARD' : 
                                method === 'promptpay' ? 'PROMPTPAY' : 
                                `MOBILE_BANKING${selectedBank ? ` (${selectedBank.name})` : ''}`

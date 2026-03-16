@@ -596,6 +596,7 @@ const AccountSetting = () => {
               </div>
               <Link
                 to="/forgot-password"
+                state={{ from: 'account-settings' }}
                 className="px-6 py-3 bg-[#12121e] border border-[#2a2a3e] text-[#8b2cf5] font-bold text-sm rounded-xl hover:bg-[#1c1c2b] hover:text-white transition-all flex items-center gap-2"
               >
                 <Lock className="w-4 h-4" /> ใช้หน้าลืมรหัสผ่าน
@@ -611,14 +612,6 @@ const AccountSetting = () => {
                 <h3 className="text-xl font-bold flex items-center gap-2"><MapPinned className="w-6 h-6 text-[#8b2cf5]" /> ที่อยู่สำหรับการจัดส่ง</h3>
                 <p className="text-sm text-gray-400 mt-1">จัดการที่อยู่ของคุณเพื่อความรวดเร็วในการสั่งซื้อ</p>
               </div>
-              {!isAdding && (
-                <button
-                  onClick={() => { setIsAdding(true); setEditingAddress(null); setFormData(initialFormState); }}
-                  className="p-2 bg-[#8b2cf5]/10 text-[#8b2cf5] border border-[#8b2cf5]/30 rounded-lg hover:bg-[#8b2cf5] hover:text-white transition"
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
-              )}
             </div>
 
             {isAdding ? (
