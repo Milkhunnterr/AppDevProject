@@ -741,6 +741,7 @@ function PostCard({ post, currentUser, liked, isFollowing, onLike, onComment, on
                     <MessageCircle className="w-4 h-4" />
                     <span>{post.comments?.length || 0}</span>
                 </button>
+
             </div>
 
             {/* Comments Section */}
