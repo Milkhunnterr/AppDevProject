@@ -14,6 +14,9 @@ const BannerPage = () => {
   
   const currentUser = JSON.parse(localStorage.getItem('user'));
 
+  // 🌟 เพิ่ม State สำหรับคุมการเปิด/ปิด Dropdown ของ Navbar
+  const [showDropdown, setShowDropdown] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -40,7 +43,11 @@ const BannerPage = () => {
 
   return (
     <div className="min-h-screen bg-[#05050f] text-white font-sans pb-10">
-      <Navbar currentUser={currentUser} />
+      <Navbar 
+        currentUser={currentUser} 
+        showDropdown={showDropdown} 
+        setShowDropdown={setShowDropdown} 
+      />
 
       <div className="max-w-[1350px] mx-auto px-4 mt-8">
         <button 
