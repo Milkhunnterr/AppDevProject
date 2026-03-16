@@ -138,7 +138,7 @@ const Navbar = ({ currentUser, showDropdown, setShowDropdown }) => {
 
         <Link to="/" className="flex items-center gap-2 cursor-pointer w-fit">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(139,44,245,0.4)]">
-            <img src={logo} alt="TradeApp Logo" className="w-full h-full object-cover" />
+            <img src={logo} alt="Shoplify Logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b2cf5] to-[#4361ee]">
             Shoplify

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, CreditCard, ChevronRight, Package, Repeat } from 'lucide-react';
+import logo from '../assets/logo0.png';
 
 const Cart = () => {
     const navigate = useNavigate();
     const [cartItems, setCartItems] = useState([]);
-    
+
     useEffect(() => {
         const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
         setCartItems(savedCart);
@@ -45,18 +46,18 @@ const Cart = () => {
                     <ArrowLeft className="text-gray-400 w-5 h-5 group-hover:text-white transition-colors" />
                 </div>
                 <div className="hidden sm:flex items-center gap-2 ml-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(67,97,238,0.4)]">
-                        <Repeat className="text-white w-5 h-5" />
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#8b2cf5] to-[#4361ee] flex items-center justify-center shadow-[0_0_15px_rgba(139,44,245,0.4)] overflow-hidden">
+                        <img src={logo} alt="Shoplify Logo" className="w-full h-full object-cover" />
                     </div>
                     <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b2cf5] to-[#4361ee]">
-                        TradeApp
+                        Shoplify
                     </span>
                 </div>
             </Link>
 
             {/* Main Container */}
             <div className="w-full max-w-6xl relative z-10 mt-20 md:mt-12">
-                
+
                 <div className="mb-8 text-center md:text-left">
                     <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] flex items-center justify-center md:justify-start gap-3">
                         <ShoppingBag className="w-8 h-8 text-[#8b2cf5]" /> ตะกร้าสินค้า
@@ -77,17 +78,17 @@ const Cart = () => {
                     </div>
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-8 items-start">
-                        
+
                         {/* ฝั่งซ้าย: รายการสินค้า (กว้าง 60%) */}
                         <div className="w-full lg:flex-1 space-y-4">
                             {cartItems.map((item) => (
                                 <div key={item._id} className="bg-[#0a0a16] border border-[#2a2a3e] rounded-3xl p-5 md:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5 hover:border-[#8b2cf5]/50 transition-all shadow-xl group">
-                                    
+
                                     {/* รูปสินค้า */}
                                     <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-[#12121e] border border-[#2a2a3e] overflow-hidden flex-shrink-0">
                                         <img src={item.images?.[0] || 'https://via.placeholder.com/150'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                     </div>
-                                    
+
                                     {/* รายละเอียด */}
                                     <div className="flex-1 min-w-0 w-full">
                                         <div className="flex justify-between items-start gap-4">
@@ -95,15 +96,15 @@ const Cart = () => {
                                                 <h3 className="text-base md:text-lg font-bold text-white line-clamp-2 leading-tight">{item.productName}</h3>
                                                 <p className="text-[#8b2cf5] font-bold mt-2 text-sm">฿{item.price.toLocaleString()}</p>
                                             </div>
-                                            <button 
-                                                onClick={() => removeItem(item._id)} 
+                                            <button
+                                                onClick={() => removeItem(item._id)}
                                                 className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
                                                 title="ลบสินค้า"
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
                                         </div>
-                                        
+
                                         {/* ตัวปรับจำนวน & ราคา */}
                                         <div className="flex items-center justify-between mt-4 sm:mt-6">
                                             <div className="flex items-center bg-[#12121e] border border-[#2a2a3e] rounded-xl p-1">
@@ -127,7 +128,7 @@ const Cart = () => {
                                 <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                                     สรุปยอดคำสั่งซื้อ
                                 </h2>
-                                
+
                                 <div className="space-y-4 mb-6">
                                     <div className="flex justify-between text-sm text-gray-400">
                                         <span>ราคาสินค้า ({cartItems.length} รายการ)</span>
@@ -151,13 +152,13 @@ const Cart = () => {
                                     </span>
                                 </div>
 
-                                <button 
+                                <button
                                     onClick={() => navigate('/payment', { state: { totalAmount: calculateTotal(), items: cartItems } })}
                                     className="w-full text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-lg bg-gradient-to-r from-[#8b2cf5] to-[#4361ee] shadow-[0_0_20px_rgba(139,44,245,0.3)] hover:opacity-90"
                                 >
                                     <CreditCard className="w-6 h-6" /> ดำเนินการชำระเงิน
                                 </button>
-                                
+
                                 <Link to="/" className="w-full mt-3 py-4 border border-[#2a2a3e] bg-[#12121e] rounded-xl font-bold text-sm text-gray-400 hover:text-white flex items-center justify-center gap-2 transition-all">
                                     เลือกสินค้าเพิ่มเติม <ChevronRight className="w-4 h-4" />
                                 </Link>
@@ -170,7 +171,7 @@ const Cart = () => {
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-[#8b2cf5] mb-1">Free Shipping</p>
-                                    <p className="text-xs text-gray-400 leading-relaxed">คุณได้รับสิทธิ์ส่งฟรีเมื่อซื้อสินค้าชิ้นแรกกับร้านค้าทางการของ TradeApp</p>
+                                    <p className="text-xs text-gray-400 leading-relaxed">คุณได้รับสิทธิ์ส่งฟรีเมื่อซื้อสินค้าชิ้นแรกกับร้านค้าทางการของ Shoplify</p>
                                 </div>
                             </div>
                         </div>
