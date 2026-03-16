@@ -741,10 +741,7 @@ function PostCard({ post, currentUser, liked, isFollowing, onLike, onComment, on
                     <MessageCircle className="w-4 h-4" />
                     <span>{post.comments?.length || 0}</span>
                 </button>
-                {/* ปุ่ม Share */}
-                <button className="flex items-center gap-1.5 text-sm text-gray-500 transition-all duration-200 cursor-pointer hover:scale-110 hover:text-[#8b2cf5] ml-2">
-                    <Share2 className="w-4 h-4" />
-                </button>
+
             </div>
 
             {/* Comments Section */}
