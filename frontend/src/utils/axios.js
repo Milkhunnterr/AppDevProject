@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // สร้างตัวแปร axiosInstance และส่งออก (Export) ไปใช้งาน
 export const axiosInstance = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
     withCredentials: true,
 });
 
@@ -41,7 +41,7 @@ axiosInstance.interceptors.response.use(
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 }).then(() => axiosInstance(originalRequest))
-                  .catch(err => Promise.reject(err));
+                    .catch(err => Promise.reject(err));
             }
 
             originalRequest._retry = true;
@@ -49,7 +49,7 @@ axiosInstance.interceptors.response.use(
 
             try {
                 // เรียก refresh-token endpoint
-                await axios.post('http://localhost:5000/api/auth/refresh-token', {}, {
+                await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/refresh-token`, {}, {
                     withCredentials: true,
                 });
 
@@ -69,4 +69,4 @@ axiosInstance.interceptors.response.use(
 
         return Promise.reject(error);
     }
-);
+);
