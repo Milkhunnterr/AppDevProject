@@ -1,18 +1,23 @@
 import axios from 'axios';
 
 // 🌐 ตั้งค่า URL ของ Backend
-// ถ้าอยู่บน Render จะดึงค่าจาก VITE_API_URL (ที่เราตั้งใน Environment) 
-// แต่ถ้ากำลังรันแบบ Local (npm run dev) ให้บังคับวิ่งไปที่ localhost:5000 เสมอ
 const isDev = import.meta.env.MODE === 'development';
-const API_BASE_URL = isDev ? 'http://localhost:5000/api' : (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
-// สร้างตัวแปร axiosInstance
+// 🌟 แก้ไขตรงนี้: 
+// ถ้าเป็น Dev ให้ใช้ localhost 
+// แต่ถ้าไม่ใช่ Dev (เช่นบน Render) ต้องใช้ VITE_API_URL เท่านั้น 
+// ถ้าลืมตั้งค่าใน Render ให้มันฟ้อง Error ออกมาเลย ดีกว่าปล่อยให้มันวิ่งไปหา localhost แล้วสมัครไม่ได้
+const API_BASE_URL = isDev
+    ? 'http://localhost:5000/api'
+    : (import.meta.env.VITE_API_URL || 'https://appdevproject-la7w.onrender.com/api'); // ใส่ URL Backend จริงของคุณเป็นค่าสำรองไว้เลย
+
 export const axiosInstance = axios.create({
     baseURL: API_BASE_URL,
-    withCredentials: true, // สำคัญมาก: เพื่อให้ส่ง Cookie/Token ไปกับ Request ได้
+    withCredentials: true,
 });
 
-// 🔄 ตัวแปรป้องกัน refresh loop
+// --- ส่วน Interceptor ด้านล่างนี้สมบูรณ์อยู่แล้ว ใช้ตามเดิมได้เลยครับ ---
+
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -27,23 +32,18 @@ const processQueue = (error) => {
     failedQueue = [];
 };
 
-// 🛡️ Interceptor: จัดการ Response และการ Refresh Token
 axiosInstance.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
-        // ถ้าเจอ Error 401 (Unauthorized) และยังไม่เคยลอง Retry
         if (error.response?.status === 401 && !originalRequest._retry) {
-
-            // ถ้า Error มาจากตัว Refresh Token เอง ให้เด้งไปหน้า Login ทันที
             if (originalRequest.url?.includes('/auth/refresh-token')) {
                 window.location.href = '/login';
                 return Promise.reject(error);
             }
 
             if (isRefreshing) {
-                // ถ้ากำลัง Refresh อยู่ ให้เอา Request นี้ใส่คิวรอไว้
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 })
@@ -55,27 +55,20 @@ axiosInstance.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // เรียก API เพื่อขอ Refresh Token ใหม่
-                // ใช้ axios ตัวหลักเรียกเพื่อเลี่ยงการติด Interceptor วนลูป
                 await axios.post(`${API_BASE_URL}/auth/refresh-token`, {}, {
                     withCredentials: true,
                 });
 
                 processQueue(null);
                 isRefreshing = false;
-
-                // เมื่อสำเร็จ ให้ลองส่ง Request เดิมใหม่อีกครั้ง
                 return axiosInstance(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError);
                 isRefreshing = false;
-
-                // ถ้า Refresh ไม่ผ่าน ให้กลับไปหน้า Login
                 window.location.href = '/login';
                 return Promise.reject(refreshError);
             }
         }
-
         return Promise.reject(error);
     }
 );
