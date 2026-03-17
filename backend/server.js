@@ -29,9 +29,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // 🛡️ Middlewares
+// 🛡️ ตั้งค่า CORS ให้ดุดันและรองรับ Production
 app.use(cors({
-    origin: (origin, callback) => callback(null, true),
-    credentials: true
+    origin: (origin, callback) => {
+        // อนุญาตให้ทุก URL เข้าถึงได้ (รวมถึง Render และ localhost ของเพื่อน)
+        callback(null, true);
+    },
+    credentials: true, // 🌟 สำคัญมาก: เพื่อให้บันทึก Cookie/Session ได้
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 app.use(express.json());
 app.use(cookieParser());
